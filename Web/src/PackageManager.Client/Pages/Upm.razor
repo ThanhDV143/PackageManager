@@ -10,7 +10,7 @@
     <div class="page-head">
         <div class="page-head__text">
             <h1 class="page-title">UPM</h1>
-            <p class="page-sub">@(_data?.Packages.Count ?? 0) package từ Verdaccio · chỉ xem, dữ liệu đọc trực tiếp</p>
+            <p class="page-sub">@(_data?.Packages.Count ?? 0) package từ Verdaccio</p>
         </div>
         <label class="select-pill">
             Sắp xếp
@@ -25,7 +25,6 @@
         <span class="upm-banner__icon"><Icon Name="server" /></span>
         <div class="upm-banner__text">
             <span style="font-weight: 600">Registry: <span class="mono" style="color: var(--upm-text)">@(_data?.Registry ?? "…")</span></span>
-            <span class="small muted">Thêm scoped registry này vào <code>Packages/manifest.json</code>. Publish / sửa package bằng <code>npm publish</code> trên Verdaccio.</span>
         </div>
         <button type="button" class="btn btn--upm" disabled="@(_data == null)" @onclick="CopyUrl"><Icon Name="copy" Size="16" />Copy URL</button>
     </div>
@@ -50,14 +49,13 @@
         <div class="error-panel">
             <span class="empty__icon"><Icon Name="unplug" Size="26" /></span>
             <span class="empty__title">Không kết nối được registry UPM</span>
-            <span class="empty__text"><span class="mono">@Host</span> không phản hồi. Tab .unitypackage vẫn dùng bình thường.</span>
+            <span class="empty__text"><span class="mono">@Host</span> không phản hồi.</span>
             <button type="button" class="btn btn--danger" @onclick="LoadAsync"><Icon Name="refresh" />Thử lại</button>
         </div>
     }
     else if (_data.Packages.Count == 0)
     {
         <EmptyState Title="Registry chưa có package nào" IconName="upm">
-            <ChildContent>Publish package lên Verdaccio bằng <code>npm publish</code>.</ChildContent>
         </EmptyState>
     }
     else
@@ -72,7 +70,7 @@
                             <span style="font-weight: 600; font-size: 16px; color: var(--text)">@(p.DisplayName ?? p.Name)</span>
                             <span class="mono small subtle">@(p.DisplayName != null ? p.Name : "không có displayName → dùng tên package")</span>
                         </div>
-                        <p style="margin: 0; color: var(--muted); line-height: 1.5">@(string.IsNullOrWhiteSpace(p.Description) ? "Không có mô tả." : p.Description)</p>
+                        <p class="clamp-2" style="margin: 0; color: var(--muted); line-height: 1.5" title="@p.Description">@(string.IsNullOrWhiteSpace(p.Description) ? "Không có mô tả." : p.Description)</p>
                         @if (p.Keywords.Count > 0)
                         {
                             <div class="row" style="gap: 6px; padding-top: 2px">

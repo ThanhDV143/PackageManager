@@ -10,9 +10,8 @@ else
 {
     <main class="page page--narrow">
         <EmptyState Title="Trang này dành cho admin" IconName="alert">
-            <ChildContent>Khách vẫn xem và tải package bình thường mà không cần đăng nhập.</ChildContent>
             <Actions>
-                <a class="btn btn--primary" href="@($"login?returnUrl={Uri.EscapeDataString("/" + Nav.ToBaseRelativePath(Nav.Uri))}")">Đăng nhập admin</a>
+                <a class="btn btn--primary" href="@($"login?returnUrl={Uri.EscapeDataString("/" + Nav.ToBaseRelativePath(Nav.Uri))}")">Đăng nhập</a>
             </Actions>
         </EmptyState>
     </main>

@@ -25,7 +25,7 @@
         <div class="error-panel">
             <span class="empty__icon"><Icon Name="unplug" Size="26" /></span>
             <span class="empty__title">Không kết nối được registry UPM</span>
-            <span class="empty__text">@_error Tab .unitypackage vẫn dùng bình thường.</span>
+            <span class="empty__text">@_error</span>
             <button type="button" class="btn btn--danger" @onclick="LoadAsync"><Icon Name="refresh" />Thử lại</button>
         </div>
     }
@@ -126,7 +126,6 @@
                     {
                         <div class="empty" style="margin: 20px 0">
                             <span class="empty__title" style="font-size: 15px">Không có dependency</span>
-                            <span class="empty__text">Phiên bản @_ver không phụ thuộc package nào khác.</span>
                         </div>
                     }
                     else
@@ -164,12 +163,10 @@
                         </select>
                     </label>
                 </div>
-                <p class="small muted" style="margin: 0; line-height: 1.55">Dán vào <code style="color: var(--text)">Packages/manifest.json</code> của project Unity.</p>
                 <pre class="code-block">@Snippet</pre>
                 <button type="button" class="btn btn--primary btn--block @(_copied ? "btn--copied" : null)" style="height: 46px; border-radius: 12px; font-size: 15px" @onclick="Copy">
                     <Icon Name="@(_copied ? "check" : "copy")" />@(_copied ? "Đã copy" : "Copy đoạn cài đặt")
                 </button>
-                <p class="xsmall subtle" style="margin: 0; line-height: 1.5">Nếu manifest đã có scoped registry này, chỉ cần thêm dòng trong <code>dependencies</code>.</p>
             </aside>
         </div>
     }

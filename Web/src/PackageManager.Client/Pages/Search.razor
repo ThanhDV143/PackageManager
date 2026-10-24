@@ -8,7 +8,6 @@
 <main class="page page--narrow">
     <div class="page-head__text">
         <h1 class="page-title" style="font-size: 26px; line-height: 1.25">@(string.IsNullOrWhiteSpace(Q) ? "Tìm kiếm" : $"Kết quả cho “{Q}”")</h1>
-        <p class="page-sub">Tìm trong tên, tên package, mô tả và publisher của cả hai nguồn</p>
     </div>
 
     <form role="search" class="mobile-only" @onsubmit="Submit" @onsubmit:preventDefault>
@@ -49,7 +48,6 @@
         @if (Filtered.Count == 0)
         {
             <EmptyState Title="@($"Không tìm thấy “{Q}”")" IconName="search" Class="empty--plain">
-                <ChildContent>Thử từ khoá ngắn hơn, hoặc tìm theo tên package dạng <code>com.x.y</code>.</ChildContent>
                 <Actions>
                     @if (Terms.Length > 1)
                     {

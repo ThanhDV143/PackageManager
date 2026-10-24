@@ -3,7 +3,7 @@
 @inject AuthState Auth
 @inject NavigationManager Nav
 
-<PageTitle>Đăng nhập admin · Package Manager</PageTitle>
+<PageTitle>Đăng nhập · Package Manager</PageTitle>
 
 <main style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 48px 16px">
     @if (Auth.IsAdmin)
@@ -18,8 +18,7 @@
     {
         <form class="login-card" @onsubmit="Submit" @onsubmit:preventDefault>
             <div style="display: flex; flex-direction: column; gap: 6px">
-                <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.02em">Đăng nhập admin</h1>
-                <p class="muted" style="margin: 0; line-height: 1.5">Khách không cần đăng nhập để xem và tải package.</p>
+                <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.02em">Đăng nhập</h1>
             </div>
             @if (_error != null)
             {

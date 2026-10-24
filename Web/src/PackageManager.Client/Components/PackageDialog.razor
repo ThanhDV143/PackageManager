@@ -33,11 +33,11 @@
                 </div>
                 @if (_storeOk)
                 {
-                    <div role="status" class="status-ok"><Icon Name="check" Size="16" />Đã đọc dữ liệu. Kiểm tra và sửa các trường bên dưới trước khi lưu.</div>
+                    <div role="status" class="status-ok"><Icon Name="check" Size="16" />Đã đọc dữ liệu.</div>
                 }
                 @if (_storeError != null)
                 {
-                    <div role="alert" class="alert alert--warning"><Icon Name="warning" /><span><strong>@_storeError</strong> Các trường bên dưới vẫn sửa được.</span></div>
+                    <div role="alert" class="alert alert--warning"><Icon Name="warning" /><span>@_storeError</span></div>
                 }
             </div>
 
@@ -65,14 +65,12 @@
                 <div class="field">
                     <label for="f-store">Phiên bản trên Store</label>
                     <input id="f-store" class="input input--mono input--readonly" readonly value="@_model.StoreVersion" />
-                    <span class="field__hint">Chỉ tham khảo — không ghi đè phiên bản file</span>
                 </div>
             </div>
 
             <div class="field">
                 <label for="f-short">Mô tả ngắn</label>
                 <textarea id="f-short" class="input" rows="2" @bind="_model.ShortDescription"></textarea>
-                <span class="field__hint" style="text-align: right">1–2 câu · hiện trên thẻ danh sách</span>
             </div>
 
             <div class="field">
@@ -89,7 +87,7 @@
                 }
                 else if (string.IsNullOrWhiteSpace(_model.DescriptionHtml))
                 {
-                    <div class="desc-preview" style="color: var(--placeholder)">Chưa có mô tả — đọc từ Asset Store hoặc nhập ở chế độ HTML.</div>
+                    <div class="desc-preview" style="color: var(--placeholder)">Chưa có mô tả.</div>
                 }
                 else
                 {
@@ -102,7 +100,7 @@
                 <span class="field__label">Ảnh</span>
                 @if (Images.Count == 0)
                 {
-                    <span class="field__hint">Chưa có ảnh. Ảnh chính và ảnh chụp lấy từ Asset Store.</span>
+                    <span class="field__hint">Chưa có ảnh.</span>
                 }
                 else
                 {
@@ -126,7 +124,6 @@
                             <button type="button" class="img-pick" style="color: var(--muted); font-weight: 600; font-size: 12px" @onclick="() => _showAll = true">+@(Images.Count - 5)</button>
                         }
                     </div>
-                    <span class="field__hint">Bấm vào ảnh để đặt làm ảnh chính.</span>
                 }
             </div>
 
@@ -137,10 +134,7 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <div class="dlg-foot" style="width: 100%">
-            <span class="xsmall subtle" style="max-width: 360px">
-                @(IsEdit ? "Chỉ cập nhật thông tin chung. Phiên bản của các file giữ nguyên." : "Thông tin chung của package. File và phiên bản được thêm khi upload hoặc gán.")
-            </span>
+        <div class="dlg-foot dlg-foot--end" style="width: 100%">
             <div class="row">
                 <button type="button" class="btn btn--neutral" style="height: 44px" @onclick="() => MudDialog.Cancel()">Huỷ</button>
                 <button type="button" class="btn btn--primary" style="height: 44px" disabled="@_saving" @onclick="Save">Lưu package</button>

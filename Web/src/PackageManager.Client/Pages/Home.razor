@@ -12,10 +12,7 @@
     <div class="page-head">
         <div class="page-head__text">
             <h1 class="page-title">.unitypackage</h1>
-            <p class="page-sub">
-                @(_data?.Total ?? 0) package ·
-                @(Auth.IsAdmin ? "mỗi package có thể có nhiều phiên bản file" : "khách xem và tải không cần đăng nhập")
-            </p>
+            <p class="page-sub">@(_data?.Total ?? 0) package</p>
         </div>
         @if (Auth.IsAdmin)
         {
@@ -63,12 +60,6 @@
     else if (_data.Total == 0)
     {
         <EmptyState Title="Chưa có package nào" IconName="box" IconClass="empty__icon--unity">
-            <ChildContent>
-                @if (Auth.IsAdmin)
-                {
-                    <text>Upload file mới, hoặc quét thư mục <code>unitypkgs/</code> để gộp file có sẵn.</text>
-                }
-            </ChildContent>
             <Actions>
                 @if (Auth.IsAdmin)
                 {
@@ -130,7 +121,7 @@
                                 {
                                     <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
                                         <ActivatorContent>
-                                            <button type="button" class="btn-icon" aria-label="Thao tác khác"><Icon Name="more" /></button>
+                                            <button type="button" class="btn-icon" aria-label="Thao tác khác" @onclick="e => context.ToggleAsync(e)"><Icon Name="more" /></button>
                                         </ActivatorContent>
                                         <ChildContent>
                                             <MudMenuItem Href="@Href(p)" Icon="@Icons.Material.Outlined.OpenInNew">Mở</MudMenuItem>
@@ -216,7 +207,7 @@
     {
         var choice = await ConfirmDialog.ShowAsync(Dialogs, "Xoá package?",
             $"Xoá \"{p.DisplayName}\" cùng {p.VersionCount} phiên bản khỏi danh sách.", "Xoá package",
-            checkboxLabel: "Xoá luôn file trên ổ đĩa (không chọn: file chuyển về \"File chưa quản lý\")");
+            checkboxLabel: "Xoá luôn file trên ổ đĩa");
         if (choice is not { } deleteFiles) return;
         try
         {

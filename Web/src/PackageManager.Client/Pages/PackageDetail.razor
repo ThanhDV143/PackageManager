@@ -101,12 +101,11 @@
         <section aria-labelledby="ver-h" style="display: flex; flex-direction: column; gap: 14px">
             <div class="row" style="align-items: baseline; gap: 10px">
                 <h2 id="ver-h" class="section-title">Phiên bản</h2>
-                <span class="small subtle">@_pkg.Versions.Count file · sắp xếp theo từng cụm số</span>
+                <span class="small subtle">@_pkg.Versions.Count file</span>
             </div>
             @if (_pkg.Versions.Count == 0)
             {
                 <EmptyState Title="Chưa có file nào" IconName="file">
-                    <ChildContent>@(Auth.IsAdmin ? "Upload file hoặc gán file có sẵn trong thư mục." : "Package này chưa có file để tải.")</ChildContent>
                     <Actions>
                         @if (Auth.IsAdmin)
                         {
@@ -216,7 +215,7 @@
                 <h2 id="desc-h" class="section-title">Mô tả</h2>
                 @if (string.IsNullOrWhiteSpace(_pkg.DescriptionHtml))
                 {
-                    <div class="rich" style="color: var(--subtle)">Chưa có mô tả đầy đủ.@(Auth.IsAdmin ? " Dán link Asset Store trong \"Sửa\" để đọc mô tả." : "")</div>
+                    <div class="rich" style="color: var(--subtle)">Chưa có mô tả đầy đủ.</div>
                 }
                 else
                 {
@@ -245,7 +244,6 @@
                             <dt>Bản trên Store</dt>
                             <dd style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px">
                                 <span class="mono small">@_pkg.StoreVersion</span>
-                                <span class="xsmall subtle">chỉ tham khảo, khác bản file</span>
                             </dd>
                         </div>
                     }
@@ -397,7 +395,7 @@
         if (_pkg == null) return;
         var choice = await ConfirmDialog.ShowAsync(Dialogs, "Xoá package?",
             $"Xoá \"{_pkg.DisplayName}\" cùng {_pkg.Versions.Count} phiên bản khỏi danh sách.", "Xoá package",
-            checkboxLabel: "Xoá luôn file trên ổ đĩa (không chọn: file chuyển về \"File chưa quản lý\")");
+            checkboxLabel: "Xoá luôn file trên ổ đĩa");
         if (choice is not { } deleteFiles) return;
         try
         {

@@ -13,7 +13,7 @@
                 <p class="page-sub">
                     @if (_scan != null)
                     {
-                        <text>@_scan.TotalFiles file trong <code style="color: var(--text)">@_scan.Folder</code> chưa thuộc package nào · nhóm theo tên gợi ý · quét lúc @Fmt.Time(_scan.ScannedAt) hôm nay</text>
+                        <text>@_scan.TotalFiles file trong <code style="color: var(--text)">@_scan.Folder</code> · quét lúc @Fmt.Time(_scan.ScannedAt)</text>
                     }
                     else
                     {
@@ -46,7 +46,6 @@
         else if (_scan.Groups.Count == 0)
         {
             <EmptyState Title="Không còn file nào chưa quản lý" IconName="check">
-                <ChildContent>Mọi file trong <code>@_scan.Folder</code> đều đã thuộc một package.</ChildContent>
                 <Actions><a href="" class="btn btn--neutral">Về danh sách</a></Actions>
             </EmptyState>
         }
@@ -65,7 +64,7 @@
                             </div>
                             @if (missingVersion)
                             {
-                                <span class="small" style="color: var(--warning)">Không đoán được phiên bản — nhập tay hoặc bỏ qua</span>
+                                <span class="small" style="color: var(--warning)">Không đoán được phiên bản</span>
                             }
                             else if (g.MatchPackageId != null)
                             {
@@ -73,7 +72,7 @@
                             }
                             else
                             {
-                                <span class="small muted">Chưa có package trùng tên — tạo mới và dán link Asset Store</span>
+                                <span class="small muted">Chưa có package trùng tên</span>
                             }
                         </div>
                         <div class="row" style="gap: 6px">

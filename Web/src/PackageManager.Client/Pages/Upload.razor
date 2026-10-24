@@ -12,13 +12,12 @@
     <main class="page page--medium">
         <div class="page-head__text">
             <h1 class="page-title">Upload .unitypackage</h1>
-            <p class="page-sub">Tên và phiên bản được đoán từ tên file. Kiểm tra từng dòng rồi bấm xác nhận — hệ thống không tự gộp.</p>
         </div>
 
         <label class="dropzone" @ref="_zone">
             <span class="dropzone__icon"><Icon Name="upload" Size="24" /></span>
             <span style="font-size: 16px; font-weight: 600">Kéo thả file .unitypackage vào đây</span>
-            <span class="muted">hoặc <span class="link-like">chọn file</span> · nhiều file cùng lúc, mỗi file có thể vài trăm MB</span>
+            <span class="muted">hoặc <span class="link-like">chọn file</span></span>
             <input type="file" multiple accept=".unitypackage,.zip,.rar,.7z" @ref="_input" />
         </label>
 
@@ -99,7 +98,6 @@
                                 <button type="button" class="btn btn--outline btn--sm" @onclick="() => FillPackageInfo(item)">
                                     <Icon Name="wand" Size="16" />Điền thông tin package…
                                 </button>
-                                <span class="xsmall subtle">Dán link Asset Store để có ảnh, mô tả, publisher. Bỏ qua thì package chỉ có tên.</span>
                             </div>
                         }
 
@@ -227,7 +225,7 @@
             var parsed = FileNameParser.Parse(f.Name);
             var item = new Item { JsId = f.Id, FileName = f.Name, Size = f.Size, Name = parsed.Name, Version = parsed.Version ?? "" };
             if (PackageParam is { Length: > 0 } fixedTarget && _packages.Any(p => p.PackageId == fixedTarget)) item.Target = fixedTarget;
-            if (string.IsNullOrEmpty(item.Version)) item.VersionError = "Không đoán được phiên bản — nhập tay.";
+            if (string.IsNullOrEmpty(item.Version)) item.VersionError = "Không đoán được phiên bản.";
             added.Add(item);
         }
         _items.AddRange(added);
@@ -284,11 +282,11 @@
         string name = FileNameParser.Normalize(item.Name);
         foreach (var other in _items.Where(i => i.Target == NewTarget && (i == item || FileNameParser.Normalize(i.Name) == name)))
             other.Target = created.PackageId;
-        Snackbar.Add($"Đã tạo {created.DisplayName} — bấm xác nhận để tải file lên", Severity.Normal);
+        Snackbar.Add($"Đã tạo {created.DisplayName}", Severity.Normal);
     }
 
     private static string DuplicateMessage(string? package, string? version) =>
-        $"{package ?? "Package"} đã có phiên bản {version} — đổi phiên bản hoặc bỏ file.";
+        $"{package ?? "Package"} đã có phiên bản {version}.";
 
     private static string StatusLabel(Item i) => i.Status switch
     {

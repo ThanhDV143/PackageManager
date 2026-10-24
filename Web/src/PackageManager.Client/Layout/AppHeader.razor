@@ -23,7 +23,7 @@
 
         <div class="header-actions">
             <button type="button" class="icon-btn mobile-only" aria-label="Tìm kiếm" @onclick="() => _mobileSearch = !_mobileSearch"><Icon Name="search" Size="20" /></button>
-            <button type="button" class="icon-btn desktop-only" aria-label="@(Theme.IsDark ? "Chuyển sang theme sáng" : "Chuyển sang theme tối")" title="Đổi theme" @onclick="Theme.ToggleAsync">
+            <button type="button" class="icon-btn" aria-label="@(Theme.IsDark ? "Chuyển sang theme sáng" : "Chuyển sang theme tối")" title="Đổi theme" @onclick="Theme.ToggleAsync">
                 <Icon Name="@(Theme.IsDark ? "sun" : "moon")" Size="20" />
             </button>
 
@@ -31,15 +31,15 @@
                 <ActivatorContent>
                     @if (Auth.IsAdmin)
                     {
-                        <button type="button" class="account-btn desktop-only" aria-haspopup="menu">
+                        <button type="button" class="account-btn desktop-only" aria-haspopup="menu" @onclick="e => context.ToggleAsync(e)">
                             <span class="avatar">@Fmt.Initial(Auth.UserName)</span>Admin<Icon Name="chevron-down" Size="16" />
                         </button>
                     }
                     else
                     {
-                        <button type="button" class="btn btn--ghost desktop-only" aria-haspopup="menu" style="color: var(--muted)">Khách<Icon Name="chevron-down" Size="16" /></button>
+                        <button type="button" class="btn btn--ghost desktop-only" aria-haspopup="menu" style="color: var(--muted)" @onclick="e => context.ToggleAsync(e)">Khách<Icon Name="chevron-down" Size="16" /></button>
                     }
-                    <button type="button" class="icon-btn mobile-only" aria-label="Menu"><Icon Name="menu" Size="20" /></button>
+                    <button type="button" class="icon-btn mobile-only" aria-label="Menu" @onclick="e => context.ToggleAsync(e)"><Icon Name="menu" Size="20" /></button>
                 </ActivatorContent>
                 <ChildContent>
                     @if (Auth.IsAdmin)
@@ -48,16 +48,13 @@
                         <MudMenuItem Href="admin/unmanaged" Icon="@Icons.Material.Outlined.FolderOpen">File chưa quản lý</MudMenuItem>
                         <MudDivider />
                     }
-                    <MudMenuItem OnClick="Theme.ToggleAsync" Icon="@(Theme.IsDark ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)">
-                        @(Theme.IsDark ? "Theme sáng" : "Theme tối")
-                    </MudMenuItem>
                     @if (Auth.IsAdmin)
                     {
                         <MudMenuItem OnClick="Logout" Icon="@Icons.Material.Outlined.Logout">Đăng xuất</MudMenuItem>
                     }
                     else
                     {
-                        <MudMenuItem Href="@LoginHref" Icon="@Icons.Material.Outlined.Login">Đăng nhập admin</MudMenuItem>
+                        <MudMenuItem Href="@LoginHref" Icon="@Icons.Material.Outlined.Login">Đăng nhập</MudMenuItem>
                     }
                 </ChildContent>
             </MudMenu>
