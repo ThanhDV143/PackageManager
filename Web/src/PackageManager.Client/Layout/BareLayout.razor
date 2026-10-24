@@ -1,0 +1,14 @@
+@* Login page: brand + "Về danh sách" only. *@
+@inherits LayoutComponentBase
+
+<AppProviders>
+    <div class="bare">
+        <header class="app-header bare__head">
+            <div class="app-header__row">
+                <Brand />
+                <a href="" class="btn btn--ghost" style="color: var(--muted)"><Icon Name="arrow-left" />Về danh sách</a>
+            </div>
+        </header>
+        @Body
+    </div>
+</AppProviders>

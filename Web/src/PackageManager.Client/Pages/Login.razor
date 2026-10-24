@@ -1,0 +1,76 @@
+@page "/login"
+@layout BareLayout
+@inject AuthState Auth
+@inject NavigationManager Nav
+
+<PageTitle>Đăng nhập admin · Package Manager</PageTitle>
+
+<main style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 48px 16px">
+    @if (Auth.IsAdmin)
+    {
+        <div class="login-card">
+            <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.02em">Đã đăng nhập</h1>
+            <p class="muted" style="margin: 0">Bạn đang đăng nhập với quyền admin.</p>
+            <a href="@ReturnTo" class="btn btn--primary btn--lg">Tiếp tục</a>
+        </div>
+    }
+    else
+    {
+        <form class="login-card" @onsubmit="Submit" @onsubmit:preventDefault>
+            <div style="display: flex; flex-direction: column; gap: 6px">
+                <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.02em">Đăng nhập admin</h1>
+                <p class="muted" style="margin: 0; line-height: 1.5">Khách không cần đăng nhập để xem và tải package.</p>
+            </div>
+            @if (_error != null)
+            {
+                <div role="alert" class="alert alert--error"><Icon Name="alert" /><span>@_error</span></div>
+            }
+            <div class="field">
+                <label for="u">Username</label>
+                <input id="u" type="text" class="input input--lg" autocomplete="username" @bind="_user" />
+            </div>
+            <div class="field">
+                <label for="p">Password</label>
+                <div class="pw-box" style="@(_error != null ? "border-color: var(--error)" : null)">
+                    <input id="p" type="@(_show ? "text" : "password")" autocomplete="current-password" aria-invalid="@(_error != null ? "true" : "false")" @bind="_password" />
+                    <button type="button" class="btn-icon" aria-label="@(_show ? "Ẩn mật khẩu" : "Hiện mật khẩu")" @onclick="() => _show = !_show">
+                        <Icon Name="@(_show ? "eye-off" : "eye")" />
+                    </button>
+                </div>
+            </div>
+            <button type="submit" class="btn btn--primary btn--lg" disabled="@_busy">Đăng nhập</button>
+        </form>
+    }
+</main>
+
+@code {
+    [SupplyParameterFromQuery(Name = "returnUrl")] public string? ReturnUrl { get; set; }
+
+    private string _user = "", _password = "";
+    private string? _error;
+    private bool _show, _busy;
+
+    // Only local paths, so the login page cannot be used to bounce users to another site.
+    private string ReturnTo => ReturnUrl is { Length: > 0 } r && r.StartsWith('/') && !r.StartsWith("//") && !r.StartsWith("/\\") && !r.StartsWith("/login")
+        ? r.TrimStart('/') : "";
+
+    private async Task Submit()
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            await Auth.LoginAsync(_user.Trim(), _password);
+            Nav.NavigateTo(ReturnTo);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+            _password = "";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

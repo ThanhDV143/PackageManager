@@ -1,0 +1,50 @@
+<MudDialog Class="pm-dialog" Style="width: 480px; max-width: calc(100vw - 32px)">
+    <TitleContent>
+        <div class="dlg-head"><h2>@Title</h2></div>
+    </TitleContent>
+    <DialogContent>
+        <div class="dlg-body" style="gap: 14px">
+            <p style="margin: 0; line-height: 1.6; color: var(--text-2)">@Message</p>
+            @if (CheckboxLabel != null)
+            {
+                <label class="row small" style="gap: 10px; color: var(--muted)">
+                    <input type="checkbox" class="checkbox" @bind="Checked" />@CheckboxLabel
+                </label>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <div class="dlg-foot dlg-foot--end" style="width: 100%">
+            <button type="button" class="btn btn--neutral" @onclick="() => MudDialog.Cancel()">Huỷ</button>
+            <button type="button" class="btn @(Danger ? "btn--danger" : "btn--primary")" @onclick="() => MudDialog.Close(DialogResult.Ok(Checked))">@ConfirmText</button>
+        </div>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public string ConfirmText { get; set; } = "Xác nhận";
+    [Parameter] public bool Danger { get; set; }
+    [Parameter] public string? CheckboxLabel { get; set; }
+    [Parameter] public bool Checked { get; set; }
+
+    /// <returns>null when cancelled, otherwise the checkbox value.</returns>
+    public static async Task<bool?> ShowAsync(IDialogService dialogs, string title, string message, string confirmText,
+        bool danger = true, string? checkboxLabel = null, bool isChecked = false)
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { x => x.Title, title },
+            { x => x.Message, message },
+            { x => x.ConfirmText, confirmText },
+            { x => x.Danger, danger },
+            { x => x.CheckboxLabel, checkboxLabel },
+            { x => x.Checked, isChecked },
+        };
+        var dlg = await dialogs.ShowAsync<ConfirmDialog>(title, parameters, new DialogOptions { NoHeader = false, CloseOnEscapeKey = true, BackdropClick = true });
+        var result = await dlg.Result;
+        return result is { Canceled: false, Data: bool b } ? b : null;
+    }
+}

@@ -1,0 +1,449 @@
+@page "/admin/upload"
+@implements IAsyncDisposable
+@inject Api Api
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IDialogService Dialogs
+
+<PageTitle>Upload · Package Manager</PageTitle>
+
+<AdminOnly>
+    <main class="page page--medium">
+        <div class="page-head__text">
+            <h1 class="page-title">Upload .unitypackage</h1>
+            <p class="page-sub">Tên và phiên bản được đoán từ tên file. Kiểm tra từng dòng rồi bấm xác nhận — hệ thống không tự gộp.</p>
+        </div>
+
+        <label class="dropzone" @ref="_zone">
+            <span class="dropzone__icon"><Icon Name="upload" Size="24" /></span>
+            <span style="font-size: 16px; font-weight: 600">Kéo thả file .unitypackage vào đây</span>
+            <span class="muted">hoặc <span class="link-like">chọn file</span> · nhiều file cùng lúc, mỗi file có thể vài trăm MB</span>
+            <input type="file" multiple accept=".unitypackage,.zip,.rar,.7z" @ref="_input" />
+        </label>
+
+        @if (_items.Count > 0)
+        {
+            <div class="row row--between small muted">
+                <span><strong style="color: var(--text)">@_items.Count file</strong> · @Fmt.Size(_items.Sum(i => i.Size))</span>
+                <div class="row" style="gap: 6px">
+                    @if (Count(UploadStatus.Pending) is > 0 and var pending)
+                    {
+                        <span class="count-pill status-pill--pending">@pending chờ xác nhận</span>
+                    }
+                    @if (Count(UploadStatus.Uploading) is > 0 and var uploading)
+                    {
+                        <span class="count-pill status-pill--uploading">@uploading đang tải lên</span>
+                    }
+                    @if (Count(UploadStatus.Done) is > 0 and var done)
+                    {
+                        <span class="count-pill status-pill--done">@done hoàn tất</span>
+                    }
+                    @if (Count(UploadStatus.Error) is > 0 and var failed)
+                    {
+                        <span class="count-pill status-pill--error">@failed lỗi</span>
+                    }
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px">
+                @foreach (var item in _items)
+                {
+                    bool editable = item.Status is UploadStatus.Pending or UploadStatus.Error;
+                    <div class="up-card @(item.Status == UploadStatus.Pending ? "up-card--pending" : item.Status == UploadStatus.Error ? "up-card--error" : null)">
+                        <div class="row" style="gap: 12px">
+                            <span class="file-icon"><Icon Name="box" /></span>
+                            <div style="flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                                <span class="mono ellipsis" style="font-size: 13.5px; font-weight: 500" title="@item.FileName">@item.FileName</span>
+                                <span class="xsmall subtle">@Fmt.Size(item.Size)</span>
+                            </div>
+                            <span class="status-pill status-pill--@item.Status.ToString().ToLowerInvariant()">@StatusLabel(item)</span>
+                            <button type="button" class="btn-icon" aria-label="Bỏ file @item.FileName" @onclick="() => Remove(item)"><Icon Name="close" /></button>
+                        </div>
+
+                        <div class="row" style="gap: 12px; align-items: flex-start">
+                            <div class="field" style="flex: 1 1 200px">
+                                <span class="field__label field__label--sm">Tên gợi ý</span>
+                                <input class="input input--md" @bind="item.Name" @bind:after="() => OnNameChanged(item)" disabled="@(!editable)" />
+                            </div>
+                            <div class="field" style="flex: 1 1 140px">
+                                <span class="field__label field__label--sm">Phiên bản</span>
+                                <input class="input input--md input--mono input-ver @(item.VersionError != null ? "input--invalid" : null)" placeholder="Nhập phiên bản"
+                                       @bind="item.Version" disabled="@(!editable)" />
+                            </div>
+                            <div class="field" style="flex: 2 1 320px">
+                                <span class="field__label field__label--sm">Package đích</span>
+                                <div class="target-box">
+                                    @if (item.Target == NewTarget)
+                                    {
+                                        <span class="target-tag target-tag--new">Mới</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="target-tag target-tag--existing">Có sẵn</span>
+                                    }
+                                    <select @bind="item.Target" disabled="@(!editable)" aria-label="Package đích">
+                                        <option value="@NewTarget">Tạo package mới “@item.Name”</option>
+                                        @foreach (var p in _packages)
+                                        {
+                                            <option value="@p.PackageId">@p.DisplayName · @p.PackageId</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (editable && item.Target == NewTarget)
+                        {
+                            <div class="row" style="gap: 10px">
+                                <button type="button" class="btn btn--outline btn--sm" @onclick="() => FillPackageInfo(item)">
+                                    <Icon Name="wand" Size="16" />Điền thông tin package…
+                                </button>
+                                <span class="xsmall subtle">Dán link Asset Store để có ảnh, mô tả, publisher. Bỏ qua thì package chỉ có tên.</span>
+                            </div>
+                        }
+
+                        @if (editable)
+                        {
+                            @if (item.ShowExtra)
+                            {
+                                <div class="row" style="gap: 12px; align-items: flex-start">
+                                    <div class="field" style="flex: 1 1 140px">
+                                        <span class="field__label field__label--sm">Unity (tuỳ chọn)</span>
+                                        <input class="input input--md" placeholder="2021.3+" @bind="item.UnityVersion" />
+                                    </div>
+                                    <div class="field" style="flex: 4 1 360px">
+                                        <span class="field__label field__label--sm">Release notes (tuỳ chọn)</span>
+                                        <textarea class="input" rows="2" @bind="item.ReleaseNotes"></textarea>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn--ghost btn--sm" style="align-self: flex-start; color: var(--muted)" @onclick="() => item.ShowExtra = true">
+                                    <Icon Name="plus" Size="16" />Unity / release notes
+                                </button>
+                            }
+                        }
+
+                        @if (item.VersionError != null && editable)
+                        {
+                            <span class="warn-text">@item.VersionError</span>
+                        }
+
+                        @if (item.Status != UploadStatus.Pending)
+                        {
+                            var pct = item.Size > 0 ? (int)Math.Round(item.Loaded * 100.0 / item.Size) : 0;
+                            <div style="display: flex; flex-direction: column; gap: 6px">
+                                <div class="progress @(item.Status == UploadStatus.Done ? "progress--done" : item.Status == UploadStatus.Error ? "progress--error" : null)"
+                                     role="progressbar" aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100" aria-label="Tiến trình upload @item.FileName">
+                                    <div style="width: @(pct)%"></div>
+                                </div>
+                                <div class="row row--between xsmall" style="color: @(item.Status == UploadStatus.Done ? "var(--success-text)" : item.Status == UploadStatus.Error ? "var(--error-text)" : "var(--muted)")">
+                                    <span>@item.Note</span>
+                                    <span class="mono">@pct%</span>
+                                </div>
+                            </div>
+                        }
+
+                        @if (item.Status == UploadStatus.Error)
+                        {
+                            <div class="row">
+                                <button type="button" class="btn btn--danger btn--sm" disabled="@_running" @onclick="() => Retry(item)"><Icon Name="refresh" Size="16" />Thử lại</button>
+                            </div>
+                        }
+                        @if (item.Status == UploadStatus.Done && item.ResultPackageId != null)
+                        {
+                            <div class="row">
+                                <a class="btn btn--ghost btn--sm" href="@($"packages/{Uri.EscapeDataString(item.ResultPackageId)}")">Mở package<Icon Name="chevron-right" Size="16" /></a>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="row" style="justify-content: flex-end; gap: 10px; padding-top: 4px">
+            <a href="@BackHref" class="btn btn--neutral btn--xl">@(Count(UploadStatus.Done) > 0 && !_running ? "Xong" : "Huỷ")</a>
+            <button type="button" class="btn btn--primary btn--xl" disabled="@(_running || Count(UploadStatus.Pending) == 0)" @onclick="StartAsync">
+                <Icon Name="upload" Stroke="2.2" />Xác nhận &amp; tải lên (@Count(UploadStatus.Pending))
+            </button>
+        </div>
+    </main>
+</AdminOnly>
+
+@code {
+    private const string NewTarget = "__new";
+
+    [SupplyParameterFromQuery(Name = "package")] public string? PackageParam { get; set; }
+
+    private enum UploadStatus { Pending, Uploading, Done, Error }
+
+    private class Item
+    {
+        public int JsId;
+        public string FileName = "";
+        public long Size;
+        public string Name = "";
+        public string Version = "";
+        public string Target = NewTarget;
+        public string? UnityVersion, ReleaseNotes, Note, VersionError, ResultPackageId;
+        public (string Target, string Version)? Duplicate;
+        public bool ShowExtra;
+        public UploadStatus Status = UploadStatus.Pending;
+        public long Loaded;
+        public DateTime StartedAt;
+    }
+
+    private readonly List<Item> _items = [];
+    private List<PackageLookupDto> _packages = [];
+    private ElementReference _zone, _input;
+    private DotNetObjectReference<Upload>? _self;
+    private bool _registered, _running;
+
+    private string BackHref => PackageParam is { Length: > 0 } p ? $"packages/{Uri.EscapeDataString(p)}" : "";
+    private int Count(UploadStatus s) => _items.Count(i => i.Status == s);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _packages = await Api.Lookup(); } catch (ApiException) { }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The drop zone only exists for admins, so register once it has rendered.
+        if (_registered || _zone.Context == null) return;
+        _registered = true;
+        _self = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("pm.registerDropZone", _zone, _input, _self);
+    }
+
+    [JSInvokable]
+    public async Task OnFilesAdded(List<JsFile> files)
+    {
+        var added = new List<Item>();
+        foreach (var f in files)
+        {
+            var parsed = FileNameParser.Parse(f.Name);
+            var item = new Item { JsId = f.Id, FileName = f.Name, Size = f.Size, Name = parsed.Name, Version = parsed.Version ?? "" };
+            if (PackageParam is { Length: > 0 } fixedTarget && _packages.Any(p => p.PackageId == fixedTarget)) item.Target = fixedTarget;
+            if (string.IsNullOrEmpty(item.Version)) item.VersionError = "Không đoán được phiên bản — nhập tay.";
+            added.Add(item);
+        }
+        _items.AddRange(added);
+        StateHasChanged();
+
+        try
+        {
+            var resolved = await Api.ResolveUploads(added.Select(a => a.FileName).ToList());
+            for (int i = 0; i < added.Count && i < resolved.Count; i++)
+            {
+                var r = resolved[i];
+                if (PackageParam is not { Length: > 0 } && r.MatchPackageId != null) added[i].Target = r.MatchPackageId;
+                if (r.VersionExists && added[i].Target == r.MatchPackageId)
+                {
+                    added[i].Duplicate = (r.MatchPackageId!, r.GuessedVersion!);
+                    added[i].VersionError = DuplicateMessage(r.MatchDisplayName, r.GuessedVersion);
+                }
+            }
+        }
+        catch (ApiException) { /* matching is a convenience; the admin can still pick the target */ }
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnProgress(int jsId, long loaded, long total)
+    {
+        var item = _items.FirstOrDefault(i => i.JsId == jsId);
+        if (item == null || item.Status != UploadStatus.Uploading) return;
+        item.Loaded = loaded;
+        double elapsed = (DateTime.UtcNow - item.StartedAt).TotalSeconds;
+        string eta = loaded > 0 && elapsed > 1 && loaded < total ? $" · còn khoảng {Fmt.Duration((total - loaded) / (loaded / elapsed))}" : "";
+        item.Note = $"{Fmt.Size(loaded)} / {Fmt.Size(total)}{eta} · đừng đóng tab";
+        StateHasChanged();
+    }
+
+    private void OnNameChanged(Item item)
+    {
+        var match = MatchByName(item.Name);
+        if (match != null && PackageParam is not { Length: > 0 }) item.Target = match.PackageId;
+    }
+
+    private PackageLookupDto? MatchByName(string name)
+    {
+        string n = FileNameParser.Normalize(name);
+        return n.Length == 0 ? null : _packages.FirstOrDefault(p => FileNameParser.Normalize(p.DisplayName) == n);
+    }
+
+    /// <summary>Creates the target package through the full dialog (Asset Store fill) instead of a bare name-only one.</summary>
+    private async Task FillPackageInfo(Item item)
+    {
+        if (await PackageDialog.OpenAsync(Dialogs, initial: new PackageEditDto { DisplayName = item.Name.Trim() }) is not { } created) return;
+        _packages = _packages.Append(new PackageLookupDto { PackageId = created.PackageId, DisplayName = created.DisplayName })
+            .OrderBy(p => p.DisplayName).ToList();
+        string name = FileNameParser.Normalize(item.Name);
+        foreach (var other in _items.Where(i => i.Target == NewTarget && (i == item || FileNameParser.Normalize(i.Name) == name)))
+            other.Target = created.PackageId;
+        Snackbar.Add($"Đã tạo {created.DisplayName} — bấm xác nhận để tải file lên", Severity.Normal);
+    }
+
+    private static string DuplicateMessage(string? package, string? version) =>
+        $"{package ?? "Package"} đã có phiên bản {version} — đổi phiên bản hoặc bỏ file.";
+
+    private static string StatusLabel(Item i) => i.Status switch
+    {
+        UploadStatus.Pending => "Chờ xác nhận",
+        UploadStatus.Uploading => "Đang tải lên",
+        UploadStatus.Done => "Hoàn tất",
+        _ => "Lỗi",
+    };
+
+    private async Task Remove(Item item)
+    {
+        await JS.InvokeVoidAsync("pm.removeFile", item.JsId);
+        _items.Remove(item);
+    }
+
+    private async Task Retry(Item item)
+    {
+        item.Status = UploadStatus.Pending;
+        item.Loaded = 0;
+        item.Note = null;
+        await StartAsync();
+    }
+
+    private async Task StartAsync()
+    {
+        // Validate everything first so a typo does not stop the queue halfway.
+        foreach (var item in _items.Where(i => i.Status == UploadStatus.Pending))
+        {
+            item.Version = item.Version.Trim();
+            item.VersionError = string.IsNullOrEmpty(item.Version) ? "Nhập phiên bản trước khi tải lên."
+                : item.Version.Any(c => !(char.IsLetterOrDigit(c) || c is '.' or '-' or '_' or '+')) ? "Phiên bản chỉ gồm chữ, số và . - _ +"
+                : null;
+            if (item.Target == NewTarget && string.IsNullOrWhiteSpace(item.Name)) item.VersionError = "Nhập tên cho package mới.";
+            // Known duplicate: stop here instead of sending hundreds of MB only for the server to refuse it.
+            if (item.Duplicate is var (dupTarget, dupVersion) && item.Target == dupTarget && item.Version == dupVersion)
+                item.VersionError = DuplicateMessage(_packages.FirstOrDefault(p => p.PackageId == dupTarget)?.DisplayName, dupVersion);
+        }
+        var queue = _items.Where(i => i.Status == UploadStatus.Pending && i.VersionError == null).ToList();
+        if (queue.Count == 0) return;
+
+        _running = true;
+        await JS.InvokeVoidAsync("pm.guardUnload", true);
+        try
+        {
+            foreach (var item in queue)
+            {
+                if (!_items.Contains(item)) continue;
+                await UploadOneAsync(item);
+            }
+        }
+        finally
+        {
+            _running = false;
+            await JS.InvokeVoidAsync("pm.guardUnload", false);
+        }
+    }
+
+    private async Task UploadOneAsync(Item item)
+    {
+        item.Status = UploadStatus.Uploading;
+        item.Loaded = 0;
+        item.Note = "Đang chuẩn bị…";
+        item.StartedAt = DateTime.UtcNow;
+        StateHasChanged();
+
+        string targetId, targetName;
+        try
+        {
+            (targetId, targetName) = await EnsureTargetAsync(item);
+        }
+        catch (ApiException ex)
+        {
+            Fail(item, ex.Message);
+            return;
+        }
+
+        var result = await JS.InvokeAsync<JsUploadResult>("pm.upload", item.JsId,
+            Api.UploadUrl(targetId, item.Version, item.FileName, item.UnityVersion), item.ReleaseNotes ?? "", _self);
+
+        if (result.Status is >= 200 and < 300)
+        {
+            item.Status = UploadStatus.Done;
+            item.Loaded = item.Size;
+            item.ResultPackageId = targetId;
+            item.Note = $"Đã thêm phiên bản {item.Version} vào {targetName}";
+            Snackbar.Add($"Đã thêm {targetName} {item.Version}", Severity.Normal);
+            await JS.InvokeVoidAsync("pm.removeFile", item.JsId);
+        }
+        else if (result.Status == -1)
+        {
+            item.Status = UploadStatus.Pending;
+            item.Note = null;
+        }
+        else
+        {
+            if (result.Status == 409) item.Duplicate = (targetId, item.Version);
+            string message = result.Status == 0
+                ? "Mất kết nối khi đang tải lên. File chưa được lưu."
+                : Api.ErrorMessage((System.Net.HttpStatusCode)result.Status, result.Body);
+            Fail(item, message);
+        }
+        StateHasChanged();
+    }
+
+    private void Fail(Item item, string message)
+    {
+        item.Status = UploadStatus.Error;
+        item.Note = message;
+        Snackbar.Add($"Upload thất bại: {item.Name}", Severity.Error);
+        StateHasChanged();
+    }
+
+    /// <summary>Creates the package first when the target is "new"; reuses one with the same ID if it already exists.</summary>
+    private async Task<(string Id, string Name)> EnsureTargetAsync(Item item)
+    {
+        if (item.Target != NewTarget)
+            return (item.Target, _packages.FirstOrDefault(p => p.PackageId == item.Target)?.DisplayName ?? item.Target);
+
+        string id = PackageIds.Suggest(null, item.Name);
+        if (_packages.FirstOrDefault(p => p.PackageId == id) is { } existing)
+        {
+            item.Target = existing.PackageId;
+            return (existing.PackageId, existing.DisplayName);
+        }
+        var created = await Api.CreatePackage(new PackageEditDto { PackageId = id, DisplayName = item.Name.Trim() });
+        var lookup = new PackageLookupDto { PackageId = created.PackageId, DisplayName = created.DisplayName };
+        _packages = _packages.Append(lookup).OrderBy(p => p.DisplayName).ToList();
+        // Other files with the same guessed name go to the package just created.
+        foreach (var other in _items.Where(i => i.Target == NewTarget && FileNameParser.Normalize(i.Name) == FileNameParser.Normalize(item.Name)))
+            other.Target = created.PackageId;
+        return (created.PackageId, created.DisplayName);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            foreach (var item in _items.Where(i => i.Status != UploadStatus.Done))
+                await JS.InvokeVoidAsync("pm.removeFile", item.JsId);
+            await JS.InvokeVoidAsync("pm.guardUnload", false);
+        }
+        catch (JSDisconnectedException) { }
+        _self?.Dispose();
+    }
+
+    public class JsFile
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public long Size { get; set; }
+    }
+
+    public class JsUploadResult
+    {
+        public int Status { get; set; }
+        public string Body { get; set; } = "";
+    }
+}

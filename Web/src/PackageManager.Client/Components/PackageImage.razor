@@ -1,0 +1,30 @@
+@* Main Asset Store image, or the orange initial tile when a package has none. *@
+@if (Mini)
+{
+    @if (HasImage)
+    {
+        <span class="mini-thumb @Class"><img src="@Url" alt="" loading="lazy" @onerror="() => _failed = true" /></span>
+    }
+    else
+    {
+        <span class="mini-thumb mini-thumb--initial @Class">@Fmt.Initial(Name)</span>
+    }
+}
+else if (HasImage)
+{
+    <div class="thumb @Class"><img src="@Url" alt="@Name" loading="lazy" @onerror="() => _failed = true" /></div>
+}
+else
+{
+    <div class="thumb thumb--initial @Class"><span class="thumb__initial">@Fmt.Initial(Name)</span></div>
+}
+
+@code {
+    [Parameter] public string? Url { get; set; }
+    [Parameter] public string? Name { get; set; }
+    [Parameter] public bool Mini { get; set; }
+    [Parameter] public string? Class { get; set; }
+
+    private bool _failed;
+    private bool HasImage => !string.IsNullOrEmpty(Url) && !_failed;
+}

@@ -1,0 +1,84 @@
+@inject Api Api
+
+<MudDialog Class="pm-dialog" Style="width: 520px; max-width: calc(100vw - 32px)">
+    <TitleContent>
+        <div class="dlg-head">
+            <h2>Gán vào package</h2>
+            <button type="button" class="btn-icon" aria-label="Đóng" @onclick="() => MudDialog.Cancel()"><Icon Name="close" /></button>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="dlg-body" style="gap: 12px">
+            <label class="search-box">
+                <Icon Name="search" />
+                <input type="search" placeholder="Lọc theo tên hoặc ID…" @bind="_filter" @bind:event="oninput" aria-label="Lọc package" />
+            </label>
+            @if (_packages == null)
+            {
+                <span class="sk" style="height: 200px"></span>
+            }
+            else
+            {
+                <div class="list-box" style="max-height: 340px; overflow-y: auto">
+                    @foreach (var p in Filtered)
+                    {
+                        bool active = p.PackageId == _selected;
+                        <button type="button" class="upm-row" style="border: 0; border-bottom: 1px solid var(--line-soft); background: @(active ? "var(--primary-soft)" : "transparent"); text-align: left; padding: 12px 16px; flex-wrap: nowrap"
+                                @onclick="() => _selected = p.PackageId" @ondblclick="() => Pick(p)">
+                            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                                <span style="font-weight: 600">@p.DisplayName</span>
+                                <span class="mono xsmall subtle">@p.PackageId</span>
+                            </span>
+                            @if (active)
+                            {
+                                <Icon Name="check" Class="subtle" />
+                            }
+                        </button>
+                    }
+                    @if (!Filtered.Any())
+                    {
+                        <span class="small subtle" style="padding: 16px">Không có package khớp.</span>
+                    }
+                </div>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <div class="dlg-foot dlg-foot--end" style="width: 100%">
+            <button type="button" class="btn btn--neutral" @onclick="() => MudDialog.Cancel()">Huỷ</button>
+            <button type="button" class="btn btn--primary" disabled="@(_selected == null)" @onclick="() => Pick(_packages!.First(p => p.PackageId == _selected))">Gán</button>
+        </div>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string? Preselect { get; set; }
+
+    private List<PackageLookupDto>? _packages;
+    private string _filter = "";
+    private string? _selected;
+
+    private IEnumerable<PackageLookupDto> Filtered => _packages!.Where(p =>
+        _filter.Length == 0 ||
+        p.DisplayName.Contains(_filter, StringComparison.CurrentCultureIgnoreCase) ||
+        p.PackageId.Contains(_filter, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selected = Preselect;
+        try { _packages = await Api.Lookup(); }
+        catch (ApiException) { _packages = []; }
+    }
+
+    private void Pick(PackageLookupDto p) => MudDialog.Close(DialogResult.Ok(p));
+
+    public static async Task<PackageLookupDto?> ShowAsync(IDialogService dialogs, string? preselect)
+    {
+        var dlg = await dialogs.ShowAsync<PickPackageDialog>("Gán vào package",
+            new DialogParameters<PickPackageDialog> { { x => x.Preselect, preselect } },
+            new DialogOptions { CloseOnEscapeKey = true, BackdropClick = true });
+        var result = await dlg.Result;
+        return result is { Canceled: false, Data: PackageLookupDto p } ? p : null;
+    }
+}

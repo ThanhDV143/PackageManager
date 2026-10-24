@@ -1,0 +1,17 @@
+@if (Package.LatestVersionId is { } id)
+{
+    <a href="@Api.VersionDownloadUrl(id)" download class="btn-icon btn-icon--primary @(Large ? "btn-icon--lg" : null)" style="@Style"
+       aria-label="Tải @Package.DisplayName v@(Package.LatestVersion)" title="Tải v@(Package.LatestVersion) · @Fmt.Size(Package.LatestSize)">
+        <Icon Name="download" Stroke="2.2" />
+    </a>
+}
+else
+{
+    <span class="btn-icon @(Large ? "btn-icon--lg" : null)" style="@Style; color: var(--disabled)" title="Chưa có file"><Icon Name="download" Stroke="2.2" /></span>
+}
+
+@code {
+    [Parameter, EditorRequired] public PackageSummaryDto Package { get; set; } = default!;
+    [Parameter] public bool Large { get; set; }
+    [Parameter] public string? Style { get; set; }
+}

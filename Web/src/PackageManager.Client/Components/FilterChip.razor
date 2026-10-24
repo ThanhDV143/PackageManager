@@ -1,0 +1,11 @@
+<button type="button" class="filter-chip" aria-pressed="@(Active ? "true" : "false")" @onclick="OnClick">
+    <span class="dot" style="background: @Dot"></span>@Label<span class="n">@Count</span>
+</button>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Dot { get; set; } = "";
+    [Parameter] public int Count { get; set; }
+    [Parameter] public bool Active { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+}

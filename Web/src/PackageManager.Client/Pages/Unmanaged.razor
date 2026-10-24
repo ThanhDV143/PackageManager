@@ -1,0 +1,218 @@
+@page "/admin/unmanaged"
+@inject Api Api
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+
+<PageTitle>File chưa quản lý · Package Manager</PageTitle>
+
+<AdminOnly>
+    <main class="page page--wide-medium">
+        <div class="page-head">
+            <div class="page-head__text">
+                <h1 class="page-title">File chưa quản lý</h1>
+                <p class="page-sub">
+                    @if (_scan != null)
+                    {
+                        <text>@_scan.TotalFiles file trong <code style="color: var(--text)">@_scan.Folder</code> chưa thuộc package nào · nhóm theo tên gợi ý · quét lúc @Fmt.Time(_scan.ScannedAt) hôm nay</text>
+                    }
+                    else
+                    {
+                        <text>Đang quét thư mục…</text>
+                    }
+                </p>
+            </div>
+            <button type="button" class="btn btn--neutral" disabled="@_loading" @onclick="LoadAsync"><Icon Name="refresh" />Quét lại</button>
+        </div>
+
+        @if (_error != null)
+        {
+            <div class="error-panel">
+                <span class="empty__icon"><Icon Name="alert" Size="26" /></span>
+                <span class="empty__title">Không quét được thư mục</span>
+                <span class="empty__text">@_error</span>
+                <button type="button" class="btn btn--danger" @onclick="LoadAsync"><Icon Name="refresh" />Thử lại</button>
+            </div>
+        }
+        else if (_scan == null)
+        {
+            @for (int i = 0; i < 3; i++)
+            {
+                <div class="group-card" style="padding: 20px; display: flex; flex-direction: column; gap: 10px">
+                    <span class="sk" style="height: 16px; width: 30%"></span>
+                    <span class="sk sk--soft" style="height: 12px; width: 50%"></span>
+                </div>
+            }
+        }
+        else if (_scan.Groups.Count == 0)
+        {
+            <EmptyState Title="Không còn file nào chưa quản lý" IconName="check">
+                <ChildContent>Mọi file trong <code>@_scan.Folder</code> đều đã thuộc một package.</ChildContent>
+                <Actions><a href="" class="btn btn--neutral">Về danh sách</a></Actions>
+            </EmptyState>
+        }
+        else
+        {
+            @foreach (var g in _scan.Groups)
+            {
+                var state = _state[g];
+                bool missingVersion = g.Files.Any(f => string.IsNullOrWhiteSpace(state.Versions[f.RelativePath]));
+                <section class="group-card">
+                    <div class="group-card__head">
+                        <div style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+                            <div class="row">
+                                <h2 style="margin: 0; font-size: 17px; font-weight: 700">@g.Name</h2>
+                                <span class="xsmall subtle">@g.Files.Count file</span>
+                            </div>
+                            @if (missingVersion)
+                            {
+                                <span class="small" style="color: var(--warning)">Không đoán được phiên bản — nhập tay hoặc bỏ qua</span>
+                            }
+                            else if (g.MatchPackageId != null)
+                            {
+                                <span class="small" style="color: var(--success-text)">Khớp package có sẵn: @g.MatchDisplayName (@g.MatchPackageId)</span>
+                            }
+                            else
+                            {
+                                <span class="small muted">Chưa có package trùng tên — tạo mới và dán link Asset Store</span>
+                            }
+                        </div>
+                        <div class="row" style="gap: 6px">
+                            @if (g.MatchPackageId != null)
+                            {
+                                <button type="button" class="btn btn--primary btn--md" disabled="@state.Busy" @onclick="() => AssignAsync(g, g.MatchPackageId, g.MatchDisplayName!)">
+                                    <Icon Name="check" Size="16" />Gán vào @g.MatchDisplayName
+                                </button>
+                                <button type="button" class="btn btn--neutral btn--md" disabled="@state.Busy" @onclick="() => PickAndAssignAsync(g)">Package khác…</button>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn--neutral btn--md" disabled="@state.Busy" @onclick="() => PickAndAssignAsync(g)">Gán vào package…</button>
+                            }
+                            <button type="button" class="btn btn--md @(g.MatchPackageId == null ? "btn--primary" : "btn--neutral")" disabled="@state.Busy" @onclick="() => CreateAndAssignAsync(g)">
+                                <Icon Name="plus" Size="16" />Tạo package mới
+                            </button>
+                            <button type="button" class="btn btn--ghost btn--md" style="color: var(--muted)" disabled="@state.Busy" @onclick="() => IgnoreAsync(g)">Bỏ qua</button>
+                        </div>
+                    </div>
+                    <div style="overflow-x: auto">
+                        <div class="t-files">
+                            <div class="t-head"><span></span><span>Tên file</span><span>Phiên bản gợi ý</span><span>Dung lượng</span><span>Sửa đổi</span></div>
+                            @foreach (var f in g.Files)
+                            {
+                                string path = f.RelativePath;
+                                bool noVer = string.IsNullOrWhiteSpace(state.Versions[path]);
+                                <div class="t-row">
+                                    <input type="checkbox" class="checkbox" aria-label="Chọn @f.FileName"
+                                           checked="@state.Selected.Contains(path)" @onchange="e => Toggle(state, path, e)" />
+                                    <span class="mono small ellipsis" style="color: var(--text-2)" title="@path">@path</span>
+                                    <input class="input input--sm input--mono @(noVer ? "input--warn" : "input-ver")" aria-label="Phiên bản cho @f.FileName"
+                                           placeholder="Nhập phiên bản" value="@state.Versions[path]" @onchange="e => state.Versions[path] = e.Value?.ToString() ?? string.Empty" />
+                                    <span class="muted">@Fmt.Size(f.Size)</span>
+                                    <span class="muted">@Fmt.Date(f.ModifiedAt)</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </section>
+            }
+        }
+    </main>
+</AdminOnly>
+
+@code {
+    private class GroupState
+    {
+        public HashSet<string> Selected = [];
+        public Dictionary<string, string> Versions = [];
+        public bool Busy;
+    }
+
+    private UnmanagedScanDto? _scan;
+    private string? _error;
+    private bool _loading;
+    private readonly Dictionary<UnmanagedGroupDto, GroupState> _state = [];
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var scan = await Api.ScanUnmanaged();
+            _state.Clear();
+            foreach (var g in scan.Groups)
+            {
+                _state[g] = new GroupState
+                {
+                    Selected = g.Files.Select(f => f.RelativePath).ToHashSet(),
+                    Versions = g.Files.ToDictionary(f => f.RelativePath, f => f.GuessedVersion ?? ""),
+                };
+            }
+            _scan = scan;
+        }
+        catch (ApiException ex) { _error = ex.Message; }
+        finally { _loading = false; }
+    }
+
+    private static void Toggle(GroupState state, string path, ChangeEventArgs e)
+    {
+        if (e.Value is true) state.Selected.Add(path);
+        else state.Selected.Remove(path);
+    }
+
+    private List<AssignFileItem>? Selection(UnmanagedGroupDto g)
+    {
+        var state = _state[g];
+        var files = g.Files.Where(f => state.Selected.Contains(f.RelativePath))
+            .Select(f => new AssignFileItem { RelativePath = f.RelativePath, Version = state.Versions[f.RelativePath].Trim() }).ToList();
+        if (files.Count == 0) { Snackbar.Add("Chọn ít nhất một file.", Severity.Warning); return null; }
+        if (files.Any(f => f.Version.Length == 0)) { Snackbar.Add("Nhập phiên bản cho các file đã chọn.", Severity.Warning); return null; }
+        return files;
+    }
+
+    private async Task AssignAsync(UnmanagedGroupDto g, string packageId, string displayName)
+    {
+        if (Selection(g) is not { } files) return;
+        var state = _state[g];
+        state.Busy = true;
+        try
+        {
+            await Api.AssignFiles(new AssignFilesRequest { PackageId = packageId, Files = files });
+            Snackbar.Add($"Đã gán {files.Count} file vào {displayName}", Severity.Normal);
+            await LoadAsync();
+        }
+        catch (ApiException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        finally { state.Busy = false; }
+    }
+
+    private async Task PickAndAssignAsync(UnmanagedGroupDto g)
+    {
+        if (Selection(g) == null) return;
+        if (await PickPackageDialog.ShowAsync(Dialogs, g.MatchPackageId) is { } picked)
+            await AssignAsync(g, picked.PackageId, picked.DisplayName);
+    }
+
+    private async Task CreateAndAssignAsync(UnmanagedGroupDto g)
+    {
+        if (Selection(g) == null) return;
+        var created = await PackageDialog.OpenAsync(Dialogs, initial: new PackageEditDto { DisplayName = g.Name });
+        if (created != null) await AssignAsync(g, created.PackageId, created.DisplayName);
+    }
+
+    private async Task IgnoreAsync(UnmanagedGroupDto g)
+    {
+        var paths = _state[g].Selected.ToList();
+        if (paths.Count == 0) { Snackbar.Add("Chọn ít nhất một file.", Severity.Warning); return; }
+        if (await ConfirmDialog.ShowAsync(Dialogs, "Bỏ qua file?",
+                $"{paths.Count} file sẽ không hiện ở đây nữa. File vẫn nằm trên ổ đĩa.", "Bỏ qua", danger: false) == null)
+            return;
+        try
+        {
+            await Api.IgnoreFiles(paths);
+            await LoadAsync();
+        }
+        catch (ApiException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+}

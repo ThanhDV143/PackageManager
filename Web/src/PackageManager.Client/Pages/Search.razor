@@ -1,0 +1,134 @@
+@page "/search"
+@inject Api Api
+@inject UpmStatus Status
+@inject NavigationManager Nav
+
+<PageTitle>Tìm “@Q” · Package Manager</PageTitle>
+
+<main class="page page--narrow">
+    <div class="page-head__text">
+        <h1 class="page-title" style="font-size: 26px; line-height: 1.25">@(string.IsNullOrWhiteSpace(Q) ? "Tìm kiếm" : $"Kết quả cho “{Q}”")</h1>
+        <p class="page-sub">Tìm trong tên, tên package, mô tả và publisher của cả hai nguồn</p>
+    </div>
+
+    <form role="search" class="mobile-only" @onsubmit="Submit" @onsubmit:preventDefault>
+        <label class="search-box" style="flex: 1">
+            <Icon Name="search" />
+            <input type="search" aria-label="Tìm kiếm package" placeholder="Tìm theo tên, com.x.y, publisher…" @bind="_input" />
+        </label>
+    </form>
+
+    @if (_data == null && !string.IsNullOrWhiteSpace(Q))
+    {
+        <div style="display: flex; flex-direction: column; gap: 10px">
+            @for (int i = 0; i < 4; i++)
+            {
+                <div class="result">
+                    <span class="sk" style="width: 44px; height: 44px; border-radius: 12px"></span>
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
+                        <span class="sk" style="height: 14px; width: 35%"></span>
+                        <span class="sk sk--soft" style="height: 10px; width: 60%"></span>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else if (_data != null)
+    {
+        <div role="group" aria-label="Lọc theo nguồn" class="row">
+            <FilterChip Label="Tất cả" Dot="var(--muted)" Count="_data.Results.Count" Active="@(_src == "all")" OnClick='() => _src = "all"' />
+            <FilterChip Label=".unitypackage" Dot="var(--unity)" Count="_data.Results.Count(r => r.Source == PackageSource.Unity)" Active="@(_src == PackageSource.Unity)" OnClick="() => _src = PackageSource.Unity" />
+            <FilterChip Label="UPM" Dot="var(--upm)" Count="_data.Results.Count(r => r.Source == PackageSource.Upm)" Active="@(_src == PackageSource.Upm)" OnClick="() => _src = PackageSource.Upm" />
+        </div>
+
+        @if (!_data.UpmAvailable)
+        {
+            <span class="warn-text">UPM không phản hồi — chỉ tìm trong .unitypackage</span>
+        }
+
+        @if (Filtered.Count == 0)
+        {
+            <EmptyState Title="@($"Không tìm thấy “{Q}”")" IconName="search" Class="empty--plain">
+                <ChildContent>Thử từ khoá ngắn hơn, hoặc tìm theo tên package dạng <code>com.x.y</code>.</ChildContent>
+                <Actions>
+                    @if (Terms.Length > 1)
+                    {
+                        <div class="row" style="justify-content: center; gap: 6px">
+                            @foreach (var t in Terms)
+                            {
+                                <a href="@($"search?q={Uri.EscapeDataString(t)}")" class="chip chip--neutral" style="text-decoration: none; padding: 4px 10px">@t</a>
+                            }
+                        </div>
+                    }
+                </Actions>
+            </EmptyState>
+        }
+        else
+        {
+            <div style="display: flex; flex-direction: column; gap: 10px">
+                @foreach (var r in Filtered)
+                {
+                    bool unity = r.Source == PackageSource.Unity;
+                    <a href="@((unity ? "packages/" : "upm/") + Uri.EscapeDataString(r.Id))" class="result">
+                        <span class="@(unity ? "unity-icon" : "upm-icon")"><Icon Name="@(unity ? "box" : "upm")" Size="22" /></span>
+                        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px">
+                            <div class="row" style="gap: 6px 10px">
+                                <span style="font-weight: 600; font-size: 16px; color: var(--text)">
+                                    @if (r.HighlightStart >= 0 && r.HighlightStart + r.HighlightLength <= r.DisplayName.Length)
+                                    {
+                                        @r.DisplayName[..r.HighlightStart]<mark>@r.DisplayName.Substring(r.HighlightStart, r.HighlightLength)</mark>@r.DisplayName[(r.HighlightStart + r.HighlightLength)..]
+                                    }
+                                    else
+                                    {
+                                        @r.DisplayName
+                                    }
+                                </span>
+                                <span class="chip chip--tag @(unity ? "chip--unity" : "chip--upm")">@(unity ? "unitypackage" : "UPM")</span>
+                            </div>
+                            <span class="mono xsmall subtle">@r.Id@(r.By != null ? $" · {r.By}" : "")</span>
+                            @if (!string.IsNullOrWhiteSpace(r.Description))
+                            {
+                                <p class="clamp-2" style="margin: 0; color: var(--muted); line-height: 1.5">@r.Description</p>
+                            }
+                            <span class="xsmall subtle">Khớp: @r.MatchedFields</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px">
+                            <span class="mono xsmall" style="font-weight: 600; color: @(unity ? "var(--unity-text)" : "var(--upm-text)")">@r.Version</span>
+                            <Icon Name="chevron-right" Class="subtle" />
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+    }
+</main>
+
+@code {
+    [SupplyParameterFromQuery(Name = "q")] public string? Q { get; set; }
+
+    private SearchResponseDto? _data;
+    private string _src = "all";
+    private string _input = "";
+
+    private string[] Terms => (Q ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    private List<SearchResultDto> Filtered => _src == "all" ? _data!.Results : _data!.Results.Where(r => r.Source == _src).ToList();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _input = Q ?? "";
+        _data = null;
+        _src = "all";
+        if (string.IsNullOrWhiteSpace(Q)) return;
+        try
+        {
+            _data = await Api.Search(Q);
+            Status.Report(_data.UpmAvailable);
+        }
+        catch (ApiException) { _data = new SearchResponseDto { Query = Q, UpmAvailable = false }; }
+    }
+
+    private void Submit()
+    {
+        if (!string.IsNullOrWhiteSpace(_input)) Nav.NavigateTo("search?q=" + Uri.EscapeDataString(_input.Trim()));
+    }
+}

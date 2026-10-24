@@ -1,0 +1,37 @@
+@* Keeps the card / row frame while data loads so the page does not jump. *@
+@if (Table)
+{
+    <div class="table-wrap">
+        @for (int i = 0; i < 6; i++)
+        {
+            <div class="t-row" style="display: flex; gap: 14px">
+                <span class="sk" style="width: 72px; height: 40px"></span>
+                <span style="flex: 1; display: flex; flex-direction: column; gap: 8px">
+                    <span class="sk" style="height: 12px; width: 40%"></span>
+                    <span class="sk sk--soft" style="height: 10px; width: 25%"></span>
+                </span>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="pkg-grid" style="display: grid !important">
+        @for (int i = 0; i < 8; i++)
+        {
+            <div class="pkg-card">
+                <div class="thumb sk" style="border-radius: 0"></div>
+                <div class="pkg-card__body" style="gap: 8px">
+                    <span class="sk" style="height: 14px; width: 75%"></span>
+                    <span class="sk sk--soft" style="height: 10px; width: 45%"></span>
+                    <span class="sk sk--soft" style="height: 10px; width: 90%"></span>
+                    <span class="sk sk--soft" style="height: 28px; width: 40%; margin-top: 6px; border-radius: 8px"></span>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public bool Table { get; set; }
+}

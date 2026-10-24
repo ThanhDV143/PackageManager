@@ -1,0 +1,12 @@
+# The root .gitignore (Unity template) ignores these because Unity generates them; the web projects need them.
+!*.csproj
+!*.slnx
+
+bin/
+obj/
+*.user
+.vs/
+
+# Local data (SQLite DB + uploaded files) — lives on the NAS volume in production.
+App_Data/
+unitypkgs/

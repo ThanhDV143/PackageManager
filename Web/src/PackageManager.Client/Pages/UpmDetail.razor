@@ -1,0 +1,255 @@
+@page "/upm/{Name}"
+@implements IDisposable
+@inject Api Api
+@inject UpmStatus Status
+@inject IJSRuntime JS
+
+<PageTitle>@(_pkg?.DisplayName ?? Name) · UPM</PageTitle>
+
+<main class="page page--detail" style="gap: 28px">
+    <nav aria-label="Breadcrumb" class="breadcrumb">
+        <a href="upm">UPM</a>
+        <Icon Name="chevron-right" Size="14" />
+        <span aria-current="page" class="mono">@Name</span>
+    </nav>
+
+    @if (_notFound)
+    {
+        <EmptyState Title="Không tìm thấy package" IconName="upm">
+            <ChildContent><code>@Name</code> không có trên registry.</ChildContent>
+            <Actions><a href="upm" class="btn btn--neutral">Về danh sách UPM</a></Actions>
+        </EmptyState>
+    }
+    else if (_error != null)
+    {
+        <div class="error-panel">
+            <span class="empty__icon"><Icon Name="unplug" Size="26" /></span>
+            <span class="empty__title">Không kết nối được registry UPM</span>
+            <span class="empty__text">@_error Tab .unitypackage vẫn dùng bình thường.</span>
+            <button type="button" class="btn btn--danger" @onclick="LoadAsync"><Icon Name="refresh" />Thử lại</button>
+        </div>
+    }
+    else if (_pkg == null)
+    {
+        <section class="row" style="gap: 20px; align-items: flex-start">
+            <span class="sk" style="width: 72px; height: 72px; border-radius: 18px"></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 10px">
+                <span class="sk" style="height: 36px; width: 40%"></span>
+                <span class="sk sk--soft" style="height: 14px; width: 30%"></span>
+                <span class="sk sk--soft" style="height: 14px; width: 70%"></span>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="row" style="gap: 20px; align-items: flex-start; flex-wrap: wrap">
+            <span class="upm-icon upm-icon--lg"><Icon Name="upm" Size="34" Stroke="1.8" /></span>
+            <div style="flex: 1 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+                <div class="row" style="gap: 10px">
+                    <h1 class="hero__title" style="font-size: 36px">@(_pkg.DisplayName ?? _pkg.Name)</h1>
+                    <span class="ver-tag ver-tag--upm" style="font-size: 14px; padding: 3px 9px">@_pkg.LatestVersion</span>
+                    <span class="chip chip--upm" style="border: 0"><Icon Name="hex" Size="13" Stroke="2.2" />UPM</span>
+                </div>
+                <span class="mono muted" style="font-size: 14px">@_pkg.Name</span>
+                @if (!string.IsNullOrWhiteSpace(_pkg.Description))
+                {
+                    <p class="hero__desc" style="max-width: none">@_pkg.Description</p>
+                }
+                <div class="row small muted" style="gap: 6px 18px">
+                    @if (_pkg.Author != null)
+                    {
+                        <span>Tác giả <strong style="color: var(--text); font-weight: 600">@_pkg.Author</strong></span>
+                    }
+                    @if (_pkg.License != null)
+                    {
+                        <span>License <strong style="color: var(--text); font-weight: 600">@_pkg.License</strong></span>
+                    }
+                    <span>Cập nhật <strong style="color: var(--text); font-weight: 600">@Fmt.Date(_pkg.UpdatedAt)</strong></span>
+                </div>
+                @if (_pkg.Keywords.Count > 0)
+                {
+                    <div class="row" style="gap: 6px">
+                        @foreach (var k in _pkg.Keywords)
+                        {
+                            <span class="chip chip--keyword" style="padding: 3px 10px">@k</span>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+
+        <div class="split" style="gap: 28px">
+            <section class="split__main" style="gap: 0">
+                <div role="tablist" aria-label="Nội dung package" class="tabs">
+                    <button type="button" role="tab" aria-selected="@(_tab == "readme" ? "true" : "false")" @onclick='() => _tab = "readme"'>README</button>
+                    <button type="button" role="tab" aria-selected="@(_tab == "versions" ? "true" : "false")" @onclick='() => _tab = "versions"'>Phiên bản (@_pkg.Versions.Count)</button>
+                    <button type="button" role="tab" aria-selected="@(_tab == "deps" ? "true" : "false")" @onclick='() => _tab = "deps"'>Dependencies (@Deps.Count)</button>
+                </div>
+
+                @if (_tab == "readme")
+                {
+                    @if (string.IsNullOrWhiteSpace(_pkg.ReadmeHtml))
+                    {
+                        <div class="empty" style="margin: 20px 0">
+                            <span class="empty__title" style="font-size: 15px">Package này chưa có README</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <article class="rich rich--plain">@((MarkupString)_pkg.ReadmeHtml)</article>
+                    }
+                }
+                else if (_tab == "versions")
+                {
+                    <div style="padding: 16px 0; display: flex; flex-direction: column">
+                        @foreach (var v in _pkg.Versions)
+                        {
+                            <div class="ver-list-row">
+                                <span class="mono" style="font-weight: 600; color: var(--upm-text); min-width: 80px">@v.Version</span>
+                                @if (v.Version == _pkg.LatestVersion)
+                                {
+                                    <span class="latest-badge">Mới nhất</span>
+                                }
+                                @if (v.Version == _ver)
+                                {
+                                    <span class="xsmall subtle">đang chọn</span>
+                                }
+                                <span class="small subtle" style="margin-left: auto">@Fmt.Date(v.PublishedAt)</span>
+                                <button type="button" class="btn btn--neutral btn--sm" disabled="@(v.Version == _ver)" @onclick="() => Pick(v.Version)">Dùng bản này</button>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    @if (Deps.Count == 0)
+                    {
+                        <div class="empty" style="margin: 20px 0">
+                            <span class="empty__title" style="font-size: 15px">Không có dependency</span>
+                            <span class="empty__text">Phiên bản @_ver không phụ thuộc package nào khác.</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div style="padding: 16px 0; display: flex; flex-direction: column">
+                            @foreach (var (dep, range) in Deps)
+                            {
+                                <div class="dep-row">
+                                    @if (_pkg.KnownPackages.Contains(dep))
+                                    {
+                                        <a href="@($"upm/{Uri.EscapeDataString(dep)}")" class="mono" style="font-weight: 600">@dep</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="mono" style="font-weight: 600">@dep</span>
+                                    }
+                                    <span class="mono small subtle" style="margin-left: auto">@range</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+            </section>
+
+            <aside class="panel" style="flex: 1 1 380px; min-width: 0">
+                <div class="row row--between">
+                    <h2 style="margin: 0; font-size: 17px; font-weight: 700">Cài đặt</h2>
+                    <label class="row small muted" style="gap: 6px">
+                        Phiên bản
+                        <select class="mono" style="font-weight: 600; color: var(--upm-text); background: var(--upm-bg); border: 0; border-radius: 6px; padding: 2px 6px" @bind="_ver" @bind:after="() => _copied = false">
+                            @foreach (var v in _pkg.Versions)
+                            {
+                                <option value="@v.Version">@v.Version</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+                <p class="small muted" style="margin: 0; line-height: 1.55">Dán vào <code style="color: var(--text)">Packages/manifest.json</code> của project Unity.</p>
+                <pre class="code-block">@Snippet</pre>
+                <button type="button" class="btn btn--primary btn--block @(_copied ? "btn--copied" : null)" style="height: 46px; border-radius: 12px; font-size: 15px" @onclick="Copy">
+                    <Icon Name="@(_copied ? "check" : "copy")" />@(_copied ? "Đã copy" : "Copy đoạn cài đặt")
+                </button>
+                <p class="xsmall subtle" style="margin: 0; line-height: 1.5">Nếu manifest đã có scoped registry này, chỉ cần thêm dòng trong <code>dependencies</code>.</p>
+            </aside>
+        </div>
+    }
+
+    @if (_toast)
+    {
+        <div role="status" class="toast"><Icon Name="check" />Đã copy đoạn cài đặt @(_pkg?.DisplayName ?? Name) @_ver</div>
+    }
+</main>
+
+@code {
+    [Parameter] public string Name { get; set; } = "";
+
+    private UpmPackageDetailDto? _pkg;
+    private string? _error;
+    private bool _notFound, _copied, _toast;
+    private string _tab = "readme";
+    private string _ver = "";
+    private CancellationTokenSource? _toastCts;
+
+    private List<KeyValuePair<string, string>> Deps =>
+        _pkg?.Versions.FirstOrDefault(v => v.Version == _ver)?.Dependencies.OrderBy(d => d.Key).ToList() ?? [];
+
+    private string Snippet => $$"""
+        {
+          "scopedRegistries": [
+            {
+              "name": "{{_pkg!.RegistryName}}",
+              "url": "{{_pkg.Registry}}",
+              "scopes": [ "{{Fmt.UpmScope(_pkg.Name)}}" ]
+            }
+          ],
+          "dependencies": {
+            "{{_pkg.Name}}": "{{_ver}}"
+          }
+        }
+        """;
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _error = null;
+        _notFound = false;
+        _pkg = null;
+        try
+        {
+            _pkg = await Api.GetUpm(Name);
+            _notFound = _pkg == null;
+            _ver = _pkg?.LatestVersion ?? "";
+            _tab = "readme";
+            Status.Report(true);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+            Status.Report(false);
+        }
+    }
+
+    private void Pick(string version)
+    {
+        _ver = version;
+        _copied = false;
+    }
+
+    private async Task Copy()
+    {
+        if (!await JS.InvokeAsync<bool>("pm.copy", Snippet)) return;
+        _copied = true;
+        _toast = true;
+        _toastCts?.Cancel();
+        _toastCts = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(2500, _toastCts.Token);
+            _toast = false;
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    public void Dispose() => _toastCts?.Cancel();
+}

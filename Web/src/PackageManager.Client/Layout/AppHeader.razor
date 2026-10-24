@@ -1,0 +1,136 @@
+@implements IDisposable
+@inject NavigationManager Nav
+@inject AuthState Auth
+@inject ThemeState Theme
+@inject UpmStatus Upm
+@inject ISnackbar Snackbar
+
+<header class="app-header">
+    <div class="app-header__row">
+        <Brand />
+
+        <nav aria-label="Nguồn package" class="source-nav desktop-only">
+            <SourceTabs Active="@_active" UpmDown="Upm.Unavailable" />
+        </nav>
+
+        <form role="search" class="header-search desktop-only" @onsubmit="Search" @onsubmit:preventDefault>
+            <label class="search-box">
+                <Icon Name="search" />
+                <input type="search" data-search-input aria-label="Tìm kiếm package" placeholder="Tìm theo tên, com.x.y, publisher…" @bind="_query" />
+                <kbd>/</kbd>
+            </label>
+        </form>
+
+        <div class="header-actions">
+            <button type="button" class="icon-btn mobile-only" aria-label="Tìm kiếm" @onclick="() => _mobileSearch = !_mobileSearch"><Icon Name="search" Size="20" /></button>
+            <button type="button" class="icon-btn desktop-only" aria-label="@(Theme.IsDark ? "Chuyển sang theme sáng" : "Chuyển sang theme tối")" title="Đổi theme" @onclick="Theme.ToggleAsync">
+                <Icon Name="@(Theme.IsDark ? "sun" : "moon")" Size="20" />
+            </button>
+
+            <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
+                <ActivatorContent>
+                    @if (Auth.IsAdmin)
+                    {
+                        <button type="button" class="account-btn desktop-only" aria-haspopup="menu">
+                            <span class="avatar">@Fmt.Initial(Auth.UserName)</span>Admin<Icon Name="chevron-down" Size="16" />
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn--ghost desktop-only" aria-haspopup="menu" style="color: var(--muted)">Khách<Icon Name="chevron-down" Size="16" /></button>
+                    }
+                    <button type="button" class="icon-btn mobile-only" aria-label="Menu"><Icon Name="menu" Size="20" /></button>
+                </ActivatorContent>
+                <ChildContent>
+                    @if (Auth.IsAdmin)
+                    {
+                        <MudMenuItem Href="admin/upload" Icon="@Icons.Material.Outlined.FileUpload">Upload</MudMenuItem>
+                        <MudMenuItem Href="admin/unmanaged" Icon="@Icons.Material.Outlined.FolderOpen">File chưa quản lý</MudMenuItem>
+                        <MudDivider />
+                    }
+                    <MudMenuItem OnClick="Theme.ToggleAsync" Icon="@(Theme.IsDark ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)">
+                        @(Theme.IsDark ? "Theme sáng" : "Theme tối")
+                    </MudMenuItem>
+                    @if (Auth.IsAdmin)
+                    {
+                        <MudMenuItem OnClick="Logout" Icon="@Icons.Material.Outlined.Logout">Đăng xuất</MudMenuItem>
+                    }
+                    else
+                    {
+                        <MudMenuItem Href="@LoginHref" Icon="@Icons.Material.Outlined.Login">Đăng nhập admin</MudMenuItem>
+                    }
+                </ChildContent>
+            </MudMenu>
+        </div>
+    </div>
+
+    @if (_mobileSearch)
+    {
+        <form role="search" class="mobile-search mobile-only" @onsubmit="Search" @onsubmit:preventDefault>
+            <label class="search-box" style="flex: 1">
+                <Icon Name="search" />
+                <input type="search" aria-label="Tìm kiếm package" placeholder="Tìm theo tên, com.x.y, publisher…" @bind="_query" autofocus />
+            </label>
+        </form>
+    }
+    <nav aria-label="Nguồn package" class="source-nav source-nav--mobile mobile-only">
+        <SourceTabs Active="@_active" UpmDown="Upm.Unavailable" />
+    </nav>
+</header>
+
+@code {
+    private string _active = "";
+    private string _query = "";
+    private bool _mobileSearch;
+
+    private string LoginHref => "login?returnUrl=" + Uri.EscapeDataString("/" + Nav.ToBaseRelativePath(Nav.Uri));
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        Upm.Changed += StateHasChanged;
+        Sync();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        Sync();
+        StateHasChanged();
+    }
+
+    private void Sync()
+    {
+        string path = "/" + Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0];
+        _active = path.StartsWith("/upm") ? "upm" : path.StartsWith("/search") ? "" : "unity";
+        if (path.StartsWith("/search"))
+        {
+            _query = System.Web.HttpUtility.ParseQueryString(new Uri(Nav.Uri).Query)["q"] ?? "";
+        }
+        else
+        {
+            _mobileSearch = false;
+        }
+    }
+
+    private void Search()
+    {
+        if (string.IsNullOrWhiteSpace(_query)) return;
+        Nav.NavigateTo("search?q=" + Uri.EscapeDataString(_query.Trim()));
+    }
+
+    private async Task Logout()
+    {
+        try
+        {
+            await Auth.LogoutAsync();
+            Snackbar.Add("Đã đăng xuất", Severity.Normal);
+        }
+        catch (ApiException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+        Upm.Changed -= StateHasChanged;
+    }
+}

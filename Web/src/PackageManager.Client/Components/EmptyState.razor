@@ -1,0 +1,18 @@
+<div class="empty @Class">
+    <span class="empty__icon @IconClass"><Icon Name="@IconName" Size="26" /></span>
+    <span class="empty__title">@Title</span>
+    @if (ChildContent != null)
+    {
+        <span class="empty__text">@ChildContent</span>
+    }
+    @Actions
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string IconName { get; set; } = "box";
+    [Parameter] public string? IconClass { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+}

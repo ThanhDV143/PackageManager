@@ -1,0 +1,15 @@
+<a href="" class="unity @(Active == "unity" ? "active" : null)" aria-current="@(Active == "unity" ? "page" : null)">
+    <Icon Name="box" />.unitypackage
+</a>
+<a href="upm" class="upm @(Active == "upm" ? "active" : null)" aria-current="@(Active == "upm" ? "page" : null)">
+    <Icon Name="upm" />UPM
+    @if (UpmDown)
+    {
+        <span class="dot" title="Registry UPM không phản hồi"></span>
+    }
+</a>
+
+@code {
+    [Parameter] public string Active { get; set; } = "";
+    [Parameter] public bool UpmDown { get; set; }
+}

@@ -1,0 +1,271 @@
+@* Create / edit package metadata. Pasting an Asset Store link fills the fields; files and versions are never touched here. *@
+@inject Api Api
+
+<MudDialog Class="pm-dialog" Style="width: 760px; max-width: calc(100vw - 32px)">
+    <TitleContent>
+        <div class="dlg-head">
+            <h2>@(IsEdit ? "Sửa package" : "Tạo package")</h2>
+            <button type="button" class="btn-icon" aria-label="Đóng" @onclick="() => MudDialog.Cancel()"><Icon Name="close" /></button>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="dlg-body">
+            <div class="store-box">
+                <label for="as-url" class="field__label">Link Asset Store</label>
+                <div class="row" style="gap: 8px; flex-wrap: wrap">
+                    <div class="input-group" style="flex: 1 1 360px">
+                        <Icon Name="link" />
+                        <input id="as-url" type="url" class="mono" style="font-size: 12.5px" placeholder="https://assetstore.unity.com/packages/…/ten-123456"
+                               @bind="_model.AssetStoreUrl" @bind:event="oninput" @onkeydown="StoreKeyDown" />
+                    </div>
+                    <button type="button" class="btn" style="height: 46px; padding: 0 16px; background: var(--primary-soft); border-color: var(--primary-line); font-weight: 700"
+                            disabled="@(_reading || string.IsNullOrWhiteSpace(_model.AssetStoreUrl))" @onclick="ReadStore">
+                        @if (_reading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width: 18px; height: 18px" />
+                        }
+                        else
+                        {
+                            <Icon Name="wand" />
+                        }
+                        Đọc dữ liệu
+                    </button>
+                </div>
+                @if (_storeOk)
+                {
+                    <div role="status" class="status-ok"><Icon Name="check" Size="16" />Đã đọc dữ liệu. Kiểm tra và sửa các trường bên dưới trước khi lưu.</div>
+                }
+                @if (_storeError != null)
+                {
+                    <div role="alert" class="alert alert--warning"><Icon Name="warning" /><span><strong>@_storeError</strong> Các trường bên dưới vẫn sửa được.</span></div>
+                }
+            </div>
+
+            <div class="grid-2">
+                <div class="field">
+                    <label for="f-id">ID <span class="req">*</span></label>
+                    <input id="f-id" class="input input--mono" placeholder="com.publisher.ten" @bind="_model.PackageId" />
+                </div>
+                <div class="field">
+                    <label for="f-name">Tên hiển thị <span class="req">*</span></label>
+                    <input id="f-name" class="input" @bind="_model.DisplayName" />
+                </div>
+                <div class="field">
+                    <label for="f-pub">Publisher</label>
+                    <input id="f-pub" class="input" @bind="_model.Publisher" />
+                </div>
+                <div class="field">
+                    <label for="f-cat">Category</label>
+                    <input id="f-cat" class="input" @bind="_model.Category" />
+                </div>
+                <div class="field">
+                    <label for="f-unity">Unity hỗ trợ</label>
+                    <input id="f-unity" class="input" placeholder="2021.3+" @bind="_model.UnityVersion" />
+                </div>
+                <div class="field">
+                    <label for="f-store">Phiên bản trên Store</label>
+                    <input id="f-store" class="input input--mono input--readonly" readonly value="@_model.StoreVersion" />
+                    <span class="field__hint">Chỉ tham khảo — không ghi đè phiên bản file</span>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="f-short">Mô tả ngắn</label>
+                <textarea id="f-short" class="input" rows="2" @bind="_model.ShortDescription"></textarea>
+                <span class="field__hint" style="text-align: right">1–2 câu · hiện trên thẻ danh sách</span>
+            </div>
+
+            <div class="field">
+                <div class="row row--between">
+                    <span class="field__label">Mô tả đầy đủ (HTML)</span>
+                    <div role="group" aria-label="Chế độ xem mô tả" class="segmented segmented--sm">
+                        <button type="button" aria-pressed="@(!_htmlMode ? "true" : "false")" @onclick="() => _htmlMode = false">Xem trước</button>
+                        <button type="button" aria-pressed="@(_htmlMode ? "true" : "false")" @onclick="() => _htmlMode = true">HTML</button>
+                    </div>
+                </div>
+                @if (_htmlMode)
+                {
+                    <textarea class="input mono" rows="8" style="font-size: 12px" @bind="_model.DescriptionHtml"></textarea>
+                }
+                else if (string.IsNullOrWhiteSpace(_model.DescriptionHtml))
+                {
+                    <div class="desc-preview" style="color: var(--placeholder)">Chưa có mô tả — đọc từ Asset Store hoặc nhập ở chế độ HTML.</div>
+                }
+                else
+                {
+                    @* Server output is sanitized; anything typed here is sanitized again on save. *@
+                    <div class="desc-preview">@((MarkupString)_model.DescriptionHtml)</div>
+                }
+            </div>
+
+            <div class="field">
+                <span class="field__label">Ảnh</span>
+                @if (Images.Count == 0)
+                {
+                    <span class="field__hint">Chưa có ảnh. Ảnh chính và ảnh chụp lấy từ Asset Store.</span>
+                }
+                else
+                {
+                    <div class="row" style="gap: 10px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; align-items: flex-start">
+                        @foreach (var img in Images.Take(_showAll ? Images.Count : 5))
+                        {
+                            bool main = img == _model.MainImageUrl;
+                            <div style="display: flex; flex-direction: column; gap: 4px; flex: none">
+                                <button type="button" class="img-pick @(main ? "img-pick--main" : null)" title="@(main ? "Ảnh chính" : "Đặt làm ảnh chính")"
+                                        @onclick="() => _model.MainImageUrl = img">
+                                    <img src="@img" alt="" loading="lazy" />
+                                </button>
+                                @if (main)
+                                {
+                                    <span class="img-pick__label">Ảnh chính</span>
+                                }
+                            </div>
+                        }
+                        @if (!_showAll && Images.Count > 5)
+                        {
+                            <button type="button" class="img-pick" style="color: var(--muted); font-weight: 600; font-size: 12px" @onclick="() => _showAll = true">+@(Images.Count - 5)</button>
+                        }
+                    </div>
+                    <span class="field__hint">Bấm vào ảnh để đặt làm ảnh chính.</span>
+                }
+            </div>
+
+            @if (_saveError != null)
+            {
+                <div role="alert" class="alert alert--error"><Icon Name="alert" /><span>@_saveError</span></div>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <div class="dlg-foot" style="width: 100%">
+            <span class="xsmall subtle" style="max-width: 360px">
+                @(IsEdit ? "Chỉ cập nhật thông tin chung. Phiên bản của các file giữ nguyên." : "Thông tin chung của package. File và phiên bản được thêm khi upload hoặc gán.")
+            </span>
+            <div class="row">
+                <button type="button" class="btn btn--neutral" style="height: 44px" @onclick="() => MudDialog.Cancel()">Huỷ</button>
+                <button type="button" class="btn btn--primary" style="height: 44px" disabled="@_saving" @onclick="Save">Lưu package</button>
+            </div>
+        </div>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    /// <summary>Package being edited; null to create.</summary>
+    [Parameter] public PackageDetailDto? Existing { get; set; }
+
+    /// <summary>Prefill for a new package (e.g. a name guessed from files).</summary>
+    [Parameter] public PackageEditDto? Initial { get; set; }
+
+    private PackageEditDto _model = new();
+    private bool _reading, _storeOk, _saving, _htmlMode, _showAll;
+    private string? _storeError, _saveError;
+
+    private bool IsEdit => Existing != null;
+
+    private List<string> Images =>
+        new[] { _model.MainImageUrl }
+            .Concat(_model.Media.Select(m => m.Type == "youtube" ? m.ThumbnailUrl : m.Url))
+            .OfType<string>().Where(u => u.Length > 0).Distinct().ToList();
+
+    protected override void OnInitialized()
+    {
+        var source = (PackageEditDto?)Existing ?? Initial ?? new PackageEditDto();
+        _model = Copy(source);
+    }
+
+    private async Task StoreKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await ReadStore();
+    }
+
+    private async Task ReadStore()
+    {
+        if (string.IsNullOrWhiteSpace(_model.AssetStoreUrl)) return;
+        _reading = true;
+        _storeOk = false;
+        _storeError = null;
+        try
+        {
+            var data = await Api.ReadAssetStore(_model.AssetStoreUrl);
+            // Keep an ID the admin already chose; fill everything else from the store.
+            if (string.IsNullOrWhiteSpace(_model.PackageId)) _model.PackageId = data.PackageId;
+            _model.DisplayName = IsEdit && !string.IsNullOrWhiteSpace(_model.DisplayName) ? _model.DisplayName : data.DisplayName;
+            _model.Publisher = data.Publisher;
+            _model.Category = data.Category;
+            _model.UnityVersion = data.UnityVersion;
+            _model.StoreVersion = data.StoreVersion;
+            _model.ShortDescription = data.ShortDescription;
+            _model.DescriptionHtml = data.DescriptionHtml;
+            _model.AssetStoreUrl = data.AssetStoreUrl;
+            _model.MainImageUrl = data.MainImageUrl;
+            _model.Media = data.Media;
+            _model.MetadataFetchedAt = data.MetadataFetchedAt;
+            _storeOk = true;
+        }
+        catch (ApiException ex)
+        {
+            _storeError = ex.Message;
+        }
+        finally
+        {
+            _reading = false;
+        }
+    }
+
+    private async Task Save()
+    {
+        _saveError = null;
+        if (string.IsNullOrWhiteSpace(_model.DisplayName)) { _saveError = "Nhập tên hiển thị."; return; }
+        if (string.IsNullOrWhiteSpace(_model.PackageId)) _model.PackageId = PackageIds.Suggest(_model.Publisher, _model.DisplayName);
+
+        _saving = true;
+        try
+        {
+            var saved = IsEdit
+                ? await Api.UpdatePackage(Existing!.PackageId, _model)
+                : await Api.CreatePackage(_model);
+            MudDialog.Close(DialogResult.Ok(saved));
+        }
+        catch (ApiException ex)
+        {
+            _saveError = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static PackageEditDto Copy(PackageEditDto s) => new()
+    {
+        PackageId = s.PackageId,
+        DisplayName = s.DisplayName,
+        Publisher = s.Publisher,
+        Category = s.Category,
+        UnityVersion = s.UnityVersion,
+        StoreVersion = s.StoreVersion,
+        ShortDescription = s.ShortDescription,
+        DescriptionHtml = s.DescriptionHtml,
+        AssetStoreUrl = s.AssetStoreUrl,
+        MainImageUrl = s.MainImageUrl,
+        Media = s.Media.ToList(),
+        MetadataFetchedAt = s.MetadataFetchedAt,
+    };
+
+    private static readonly DialogOptions Options = new()
+    {
+        CloseOnEscapeKey = true,
+        BackdropClick = false,
+        Position = DialogPosition.TopCenter,
+    };
+
+    public static async Task<PackageDetailDto?> OpenAsync(IDialogService dialogs, PackageDetailDto? existing = null, PackageEditDto? initial = null)
+    {
+        var parameters = new DialogParameters<PackageDialog> { { x => x.Existing, existing }, { x => x.Initial, initial } };
+        var dlg = await dialogs.ShowAsync<PackageDialog>(existing == null ? "Tạo package" : "Sửa package", parameters, Options);
+        var result = await dlg.Result;
+        return result is { Canceled: false, Data: PackageDetailDto saved } ? saved : null;
+    }
+}

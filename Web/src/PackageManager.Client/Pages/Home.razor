@@ -1,0 +1,229 @@
+﻿@page "/"
+@inject Api Api
+@inject AuthState Auth
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+
+<PageTitle>.unitypackage · Package Manager</PageTitle>
+
+<main class="page">
+    <div class="page-head">
+        <div class="page-head__text">
+            <h1 class="page-title">.unitypackage</h1>
+            <p class="page-sub">
+                @(_data?.Total ?? 0) package ·
+                @(Auth.IsAdmin ? "mỗi package có thể có nhiều phiên bản file" : "khách xem và tải không cần đăng nhập")
+            </p>
+        </div>
+        @if (Auth.IsAdmin)
+        {
+            <div class="row">
+                <a href="admin/unmanaged" class="btn btn--soft">
+                    <Icon Name="folder" />File chưa quản lý
+                    @if (_unmanaged > 0)
+                    {
+                        <span class="badge-count">@_unmanaged</span>
+                    }
+                </a>
+                <a href="admin/upload" class="btn btn--primary"><Icon Name="upload" Stroke="2.2" />Upload</a>
+            </div>
+        }
+    </div>
+
+    <div class="row row--between">
+        <label class="select-pill">
+            Sắp xếp
+            <select value="@Sort" @onchange="SortChanged">
+                <option value="@PackageSort.Updated">Mới cập nhật</option>
+                <option value="@PackageSort.Name">Tên A–Z</option>
+                <option value="@PackageSort.Versions">Nhiều phiên bản</option>
+            </select>
+        </label>
+        <div role="group" aria-label="Kiểu hiển thị" class="segmented view-toggle">
+            <button type="button" aria-pressed="@(_view == "grid" ? "true" : "false")" @onclick='() => SetView("grid")'><Icon Name="grid" Size="16" />Lưới</button>
+            <button type="button" aria-pressed="@(_view == "table" ? "true" : "false")" @onclick='() => SetView("table")'><Icon Name="list" Size="16" />Bảng</button>
+        </div>
+    </div>
+
+    @if (_error != null)
+    {
+        <div class="error-panel">
+            <span class="empty__icon"><Icon Name="alert" Size="26" /></span>
+            <span class="empty__title">Không tải được danh sách</span>
+            <span class="empty__text">@_error</span>
+            <button type="button" class="btn btn--danger" @onclick="LoadAsync"><Icon Name="refresh" />Thử lại</button>
+        </div>
+    }
+    else if (_data == null)
+    {
+        <PackageListSkeleton Table="@(_view == "table")" />
+    }
+    else if (_data.Total == 0)
+    {
+        <EmptyState Title="Chưa có package nào" IconName="box" IconClass="empty__icon--unity">
+            <ChildContent>
+                @if (Auth.IsAdmin)
+                {
+                    <text>Upload file mới, hoặc quét thư mục <code>unitypkgs/</code> để gộp file có sẵn.</text>
+                }
+            </ChildContent>
+            <Actions>
+                @if (Auth.IsAdmin)
+                {
+                    <div class="row" style="justify-content: center">
+                        <a href="admin/upload" class="btn btn--primary">Upload</a>
+                        <a href="admin/unmanaged" class="btn btn--neutral">Quét file có sẵn</a>
+                    </div>
+                }
+            </Actions>
+        </EmptyState>
+    }
+    else
+    {
+        @if (_view == "grid")
+        {
+            <div class="pkg-grid">
+                @foreach (var p in _data.Items)
+                {
+                    <article class="pkg-card">
+                        <a href="@Href(p)" aria-label="Mở @p.DisplayName" tabindex="-1"><PackageImage Url="@p.MainImageUrl" Name="@p.DisplayName" /></a>
+                        <div class="pkg-card__body">
+                            <a href="@Href(p)" class="pkg-card__name clamp-2">@p.DisplayName</a>
+                            <div class="pkg-card__pub">@(p.Publisher ?? "Chưa có publisher")</div>
+                            <p class="pkg-card__desc clamp-2">@(p.ShortDescription ?? "Chưa có mô tả.")</p>
+                            <div class="pkg-card__foot">
+                                @if (p.LatestVersion != null)
+                                {
+                                    <span class="ver-tag">v@(p.LatestVersion)</span>
+                                }
+                                <span class="pkg-card__meta">@p.VersionCount phiên bản<br />@Fmt.Date(p.UpdatedAt)</span>
+                                <DownloadIcon Package="p" Style="margin-left: auto" />
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap pkgs">
+                <div class="t-pkgs">
+                    <div class="t-head"><span>Package</span><span>Mới nhất</span><span>Phiên bản</span><span>Cập nhật</span><span style="text-align: right">Tải</span></div>
+                    @foreach (var p in _data.Items)
+                    {
+                        <div class="t-row">
+                            <div class="t-cell-pkg">
+                                <PackageImage Url="@p.MainImageUrl" Name="@p.DisplayName" Mini="true" />
+                                <div style="min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                                    <a href="@Href(p)" class="ellipsis">@p.DisplayName</a>
+                                    <span class="xsmall subtle">@(p.Publisher ?? "Chưa có publisher")</span>
+                                </div>
+                            </div>
+                            <span class="mono small" style="color: var(--unity-text)">@(p.LatestVersion ?? "—")</span>
+                            <span class="muted">@p.VersionCount</span>
+                            <span class="muted">@Fmt.Date(p.UpdatedAt)</span>
+                            <div class="t-actions">
+                                <DownloadIcon Package="p" />
+                                @if (Auth.IsAdmin)
+                                {
+                                    <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
+                                        <ActivatorContent>
+                                            <button type="button" class="btn-icon" aria-label="Thao tác khác"><Icon Name="more" /></button>
+                                        </ActivatorContent>
+                                        <ChildContent>
+                                            <MudMenuItem Href="@Href(p)" Icon="@Icons.Material.Outlined.OpenInNew">Mở</MudMenuItem>
+                                            <MudMenuItem Href="@($"admin/upload?package={Uri.EscapeDataString(p.PackageId)}")" Icon="@Icons.Material.Outlined.Add">Thêm phiên bản</MudMenuItem>
+                                            <MudMenuItem OnClick="() => Delete(p)" Icon="@Icons.Material.Outlined.Delete">Xoá package</MudMenuItem>
+                                        </ChildContent>
+                                    </MudMenu>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="m-list">
+            @foreach (var p in _data.Items)
+            {
+                <div class="m-item">
+                    <a href="@Href(p)">
+                        <PackageImage Url="@p.MainImageUrl" Name="@p.DisplayName" Mini="true" />
+                        <span class="m-item__text">
+                            <span class="ellipsis" style="font-weight: 600">@p.DisplayName</span>
+                            <span class="xsmall subtle ellipsis">@(p.Publisher ?? "Chưa có publisher")</span>
+                            <span class="mono xsmall" style="color: var(--unity-text)">@(p.LatestVersion != null ? "v" + p.LatestVersion : "—") <span class="subtle" style="font-family: 'Plus Jakarta Sans', sans-serif">· @p.VersionCount bản</span></span>
+                        </span>
+                    </a>
+                    <DownloadIcon Package="p" Large="true" />
+                </div>
+            }
+        </div>
+
+        <Pager Page="_data.Page" PageSize="_data.PageSize" Total="_data.Total" PageChanged="GoToPage" />
+    }
+</main>
+
+@code {
+    private const int PageSize = 24;
+
+    [SupplyParameterFromQuery(Name = "page")] public int? PageParam { get; set; }
+    [SupplyParameterFromQuery(Name = "sort")] public string? SortParam { get; set; }
+
+    private PagedResult<PackageSummaryDto>? _data;
+    private string? _error;
+    private string _view = "grid";
+    private int _unmanaged;
+
+    private string Sort => SortParam is PackageSort.Name or PackageSort.Versions ? SortParam : PackageSort.Updated;
+
+    private static string Href(PackageSummaryDto p) => "packages/" + Uri.EscapeDataString(p.PackageId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _view = await JS.InvokeAsync<string?>("pm.store.get", "pm.view") == "table" ? "table" : "grid";
+        if (Auth.IsAdmin)
+        {
+            try { _unmanaged = await Api.UnmanagedCount(); } catch (ApiException) { }
+        }
+    }
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _error = null;
+        _data = null;
+        try { _data = await Api.ListPackages(Sort, Math.Max(1, PageParam ?? 1), PageSize); }
+        catch (ApiException ex) { _error = ex.Message; }
+    }
+
+    private void SortChanged(ChangeEventArgs e) =>
+        Nav.NavigateTo(Nav.GetUriWithQueryParameters(new Dictionary<string, object?> { ["sort"] = e.Value?.ToString(), ["page"] = null }));
+
+    private void GoToPage(int page) => Nav.NavigateTo(Nav.GetUriWithQueryParameter("page", page == 1 ? null : page));
+
+    private async Task SetView(string view)
+    {
+        _view = view;
+        await JS.InvokeVoidAsync("pm.store.set", "pm.view", view);
+    }
+
+    private async Task Delete(PackageSummaryDto p)
+    {
+        var choice = await ConfirmDialog.ShowAsync(Dialogs, "Xoá package?",
+            $"Xoá \"{p.DisplayName}\" cùng {p.VersionCount} phiên bản khỏi danh sách.", "Xoá package",
+            checkboxLabel: "Xoá luôn file trên ổ đĩa (không chọn: file chuyển về \"File chưa quản lý\")");
+        if (choice is not { } deleteFiles) return;
+        try
+        {
+            await Api.DeletePackage(p.PackageId, deleteFiles);
+            Snackbar.Add($"Đã xoá {p.DisplayName}", Severity.Normal);
+            await LoadAsync();
+        }
+        catch (ApiException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+}

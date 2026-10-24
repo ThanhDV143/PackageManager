@@ -1,0 +1,35 @@
+@* MudBlazor providers + first load of auth/theme state. Used by both layouts. *@
+@implements IDisposable
+@inject ThemeState Theme
+@inject AuthState Auth
+
+<MudThemeProvider Theme="AppTheme.Theme" IsDarkMode="Theme.IsDark" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+@if (Auth.Loaded)
+{
+    @ChildContent
+}
+else
+{
+    <div class="boot"><div class="boot__logo"></div></div>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Theme.Changed += StateHasChanged;
+        Auth.Changed += StateHasChanged;
+        if (!Auth.Loaded) await Task.WhenAll(Theme.LoadAsync(), Auth.LoadAsync());
+    }
+
+    public void Dispose()
+    {
+        Theme.Changed -= StateHasChanged;
+        Auth.Changed -= StateHasChanged;
+    }
+}

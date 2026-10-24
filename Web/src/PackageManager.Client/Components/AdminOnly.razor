@@ -1,0 +1,23 @@
+@* Wraps admin pages: guests get a short explanation and a login link instead. *@
+@inject AuthState Auth
+@inject NavigationManager Nav
+
+@if (Auth.IsAdmin)
+{
+    @ChildContent
+}
+else
+{
+    <main class="page page--narrow">
+        <EmptyState Title="Trang này dành cho admin" IconName="alert">
+            <ChildContent>Khách vẫn xem và tải package bình thường mà không cần đăng nhập.</ChildContent>
+            <Actions>
+                <a class="btn btn--primary" href="@($"login?returnUrl={Uri.EscapeDataString("/" + Nav.ToBaseRelativePath(Nav.Uri))}")">Đăng nhập admin</a>
+            </Actions>
+        </EmptyState>
+    </main>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

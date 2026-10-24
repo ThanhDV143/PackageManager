@@ -1,9 +1,21 @@
+# Synology NAS. Update manually: `docker compose pull && docker compose up -d` (or Container Manager).
+# Put ADMIN_PASSWORD in a .env file next to this compose file (never commit it).
 services:
   web-upkgs:
-    image: php:8.3-apache
+    image: ghcr.io/thanhdv143/upkgs-web:latest
     container_name: web-upkgs
+    # UID:GID that owns the folders below (run `id <user>` on the NAS). Remove the line to run as the image's non-root user.
+    user: "${PUID:-0}:${PGID:-0}"
+    environment:
+      Admin__UserName: ${ADMIN_USER:-admin}
+      Admin__Password: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      Verdaccio__Url: https://upm.thanhdv.com
+      TZ: Asia/Ho_Chi_Minh
     volumes:
-      - /volume1/docker/Web/upkgs:/var/www/html:rw
+      # SQLite database + login keys
+      - /volume1/docker/Web/upkgs/data:/data
+      # Existing .unitypackage files from the old PHP site
+      - /volume1/docker/Web/upkgs/unitypkgs:/data/unitypkgs
     ports:
-      - "9902:80"
+      - "9902:8080"
     restart: unless-stopped
