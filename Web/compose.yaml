@@ -1,0 +1,9 @@
+services:
+  web-upkgs:
+    image: php:8.3-apache
+    container_name: web-upkgs
+    volumes:
+      - /volume1/docker/Web/upkgs:/var/www/html:rw
+    ports:
+      - "9902:80"
+    restart: unless-stopped
