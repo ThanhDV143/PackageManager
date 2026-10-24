@@ -75,6 +75,15 @@
                         }
                     </div>
                 }
+                <div class="row" style="gap: 8px; padding-top: 4px">
+                    <a href="@_pkg.RegistryPageUrl" target="_blank" rel="noopener noreferrer" class="btn btn--neutral btn--md">Xem trên Verdaccio<Icon Name="external" Size="16" /></a>
+                    @if (_pkg.RepositoryUrl is { } repo)
+                    {
+                        <a href="@repo" target="_blank" rel="noopener noreferrer" class="btn btn--neutral btn--md">
+                            @(repo.StartsWith("https://github.com/", StringComparison.OrdinalIgnoreCase) ? "GitHub" : "Repository")<Icon Name="external" Size="16" />
+                        </a>
+                    }
+                </div>
             </div>
         </section>
 

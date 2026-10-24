@@ -96,6 +96,8 @@ public class VerdaccioClient(HttpClient http, IMemoryCache cache, IOptions<Verda
         {
             Registry = Registry,
             RegistryName = RegistryName,
+            RegistryPageUrl = $"{Registry}/-/web/detail/{Uri.EscapeDataString(Str(root, "name") ?? name)}",
+            RepositoryUrl = RepositoryUrl(latestJson),
             Name = Str(root, "name") ?? name,
             DisplayName = Str(latestJson, "displayName"),
             Description = Str(latestJson, "description") ?? Str(root, "description"),
@@ -118,6 +120,42 @@ public class VerdaccioClient(HttpClient http, IMemoryCache cache, IOptions<Verda
         using var res = await http.GetAsync(Registry + path, ct);
         res.EnsureSuccessStatusCode();
         return await JsonDocument.ParseAsync(await res.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+    }
+
+    /// <summary>package.json "repository" (string or { url }), else a GitHub "homepage", as a browsable https link.</summary>
+    private static string? RepositoryUrl(JsonElement version)
+    {
+        if (version.ValueKind != JsonValueKind.Object) return null;
+        string? raw = version.TryGetProperty("repository", out var repo)
+            ? repo.ValueKind == JsonValueKind.String ? repo.GetString() : Str(repo, "url")
+            : null;
+        return ToBrowsableRepoUrl(raw)
+            ?? (ToBrowsableRepoUrl(Str(version, "homepage")) is { } home && home.StartsWith("https://github.com/", StringComparison.OrdinalIgnoreCase) ? home : null);
+    }
+
+    /// <summary>
+    /// "git+https://github.com/a/b.git", "git@github.com:a/b.git", "github:a/b" or "a/b" → "https://github.com/a/b".
+    /// Returns null for anything that does not end up as an http(s) URL.
+    /// </summary>
+    public static string? ToBrowsableRepoUrl(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        string url = raw.Trim();
+
+        if (url.StartsWith("github:", StringComparison.OrdinalIgnoreCase)) url = "https://github.com/" + url[7..];
+        else if (System.Text.RegularExpressions.Regex.IsMatch(url, @"^[\w.-]+/[\w.-]+$")) url = "https://github.com/" + url;
+        else if (url.StartsWith("git@", StringComparison.Ordinal) && url.IndexOf(':') is > 4 and var colon)
+            url = $"https://{url[4..colon]}/{url[(colon + 1)..]}";
+
+        if (url.StartsWith("git+", StringComparison.Ordinal)) url = url[4..];
+        if (url.StartsWith("git://", StringComparison.Ordinal)) url = "https://" + url[6..];
+        if (url.StartsWith("ssh://git@", StringComparison.Ordinal)) url = "https://" + url[10..];
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+            return null;
+        string path = uri.AbsolutePath.TrimEnd('/');
+        if (path.EndsWith(".git", StringComparison.OrdinalIgnoreCase)) path = path[..^4];
+        return $"{uri.Scheme}://{uri.Host}{path}";
     }
 
     private static string? Person(JsonElement e, string property)

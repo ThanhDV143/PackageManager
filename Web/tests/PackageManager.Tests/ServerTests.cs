@@ -61,6 +61,23 @@ public class AssetStoreParseTests
         Assert.False(AssetStoreClient.TryNormalizeUrl(url, out _, out _));
 }
 
+public class RepositoryUrlTests
+{
+    [Theory]
+    [InlineData("git+https://github.com/ThanhDV143/ThanhDV.Lib.Utilities.git", "https://github.com/ThanhDV143/ThanhDV.Lib.Utilities")]
+    [InlineData("https://github.com/a/b#readme", "https://github.com/a/b")]
+    [InlineData("git@github.com:a/b.git", "https://github.com/a/b")]
+    [InlineData("git://github.com/a/b.git", "https://github.com/a/b")]
+    [InlineData("ssh://git@github.com/a/b.git", "https://github.com/a/b")]
+    [InlineData("github:a/b", "https://github.com/a/b")]
+    [InlineData("a/b", "https://github.com/a/b")]
+    [InlineData("https://gitlab.com/a/b/", "https://gitlab.com/a/b")]
+    [InlineData("javascript:alert(1)", null)]
+    [InlineData("", null)]
+    public void ToBrowsableRepoUrl_NormalizesCommonForms(string raw, string? expected) =>
+        Assert.Equal(expected, VerdaccioClient.ToBrowsableRepoUrl(raw));
+}
+
 public class FileStoreTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "pm-tests-" + Guid.NewGuid().ToString("N"));

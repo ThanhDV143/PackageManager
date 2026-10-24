@@ -177,6 +177,10 @@ namespace PackageManager.Shared
     {
         public string Registry { get; set; } = "";
         public string RegistryName { get; set; } = "";
+        /// <summary>The package's page in the Verdaccio web UI.</summary>
+        public string RegistryPageUrl { get; set; } = "";
+        /// <summary>Browsable source repository (from package.json "repository"), when there is one.</summary>
+        public string? RepositoryUrl { get; set; }
         public string Name { get; set; } = "";
         public string? DisplayName { get; set; }
         public string? Description { get; set; }
