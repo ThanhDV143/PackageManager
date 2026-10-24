@@ -13,22 +13,22 @@
                 <p class="page-sub">
                     @if (_scan != null)
                     {
-                        <text>@_scan.TotalFiles file trong <code style="color: var(--text)">@_scan.Folder</code> · quét lúc @Fmt.Time(_scan.ScannedAt)</text>
+                        <text>@_scan.TotalFiles file trong <code style="color: var(--text)">@_scan.Folder</code> · làm mới lúc @Fmt.Time(_scan.ScannedAt)</text>
                     }
-                    else
+                    else if (_error == null)
                     {
-                        <text>Đang quét thư mục…</text>
+                        <text>Đang tải package...</text>
                     }
                 </p>
             </div>
-            <button type="button" class="btn btn--neutral" disabled="@_loading" @onclick="LoadAsync"><Icon Name="refresh" />Quét lại</button>
+            <button type="button" class="btn btn--neutral" disabled="@_loading" @onclick="LoadAsync"><Icon Name="refresh" />Làm mới</button>
         </div>
 
         @if (_error != null)
         {
             <div class="error-panel">
                 <span class="empty__icon"><Icon Name="alert" Size="26" /></span>
-                <span class="empty__title">Không quét được thư mục</span>
+                <span class="empty__title">Tải package không thành công!</span>
                 <span class="empty__text">@_error</span>
                 <button type="button" class="btn btn--danger" @onclick="LoadAsync"><Icon Name="refresh" />Thử lại</button>
             </div>
