@@ -1,13 +1,26 @@
 {
-  "name": "com.thanhdv.packagemanager",
-  "displayName": "ThanhDV Package Manager",
-  "version": "0.1.0",
-  "unity": "2022.3",
-  "description": "Browse, import and remove packages from the ThanhDV package server (.unitypackage and UPM).",
-  "author": {
-    "name": "ThanhDV"
-  },
-  "dependencies": {
-    "com.unity.nuget.newtonsoft-json": "3.2.1"
-  }
+    "name": "com.thanhdv.packagemanager",
+    "version": "1.0.0",
+    "displayName": "Package Manager",
+    "description": "Browse, import and remove packages from the ThanhDV package server.",
+    "unity": "2022.3",
+    "keywords": [
+        "PackageManager",
+        "UPM",
+        "Verdaccio",
+        "unitypackage"
+    ],
+    "author": {
+        "name": "ThanhDV",
+        "email": "vanthanh1998@gmail.com",
+        "url": "https://knowledge.thanhdv.com/"
+    },
+    "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "3.2.1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ThanhDV143/PackageManager.git"
+    },
+    "license": "MIT"
 }
