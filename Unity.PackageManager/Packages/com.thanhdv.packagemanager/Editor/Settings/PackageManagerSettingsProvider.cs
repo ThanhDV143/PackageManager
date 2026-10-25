@@ -35,10 +35,7 @@ namespace ThanhDV.PackageManager
                 });
                 page.Add(url);
 
-                var help = new HelpBox(
-                    "URL of the package portal (the web app), e.g. https://packages.example.com — not the Verdaccio URL. " +
-                    $"Saved in {ProjectData.FilePath}, so the whole team shares it once committed.",
-                    HelpBoxMessageType.Info);
+                var help = new HelpBox("URL of the package portal (the web app), e.g. https://packages.example.com.", HelpBoxMessageType.Info);
                 help.AddToClassList("settings__help");
                 page.Add(help);
             },

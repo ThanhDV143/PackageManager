@@ -49,7 +49,7 @@ namespace ThanhDV.PackageManager
         private ProgressBar _progress;
         private DetailsView _details;
 
-        [MenuItem("Window/ThanhDV Package Manager")]
+        [MenuItem("Tools/ThanhDV/Package Manager")]
         public static void Open()
         {
             var window = GetWindow<PackageManagerWindow>();
