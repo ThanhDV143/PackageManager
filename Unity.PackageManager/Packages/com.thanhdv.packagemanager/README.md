@@ -7,6 +7,18 @@ Requires Unity 2022.3 or newer.
 
 ## Install
 
+### From Git URL
+
+In Unity: **Window > Package Manager > + > Add package from git URL...**, then paste:
+
+```
+https://github.com/ThanhDV143/PackageManager.git?path=/Unity.PackageManager/Packages/com.thanhdv.packagemanager
+```
+
+Add `#v1.0.0` at the end to pin a release tag instead of the latest `main`.
+
+### From the ThanhDV registry
+
 Add the registry and the package to `Packages/manifest.json`:
 
 ```json
