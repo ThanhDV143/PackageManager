@@ -1,3 +1,6 @@
+// Copied as-is into the Unity package (Editor/Shared); SharedCopyTests keeps the two in sync.
+// Unity doesn't enable nullable annotations project-wide, hence the directive.
+#nullable enable
 using System;
 using System.Collections.Generic;
 

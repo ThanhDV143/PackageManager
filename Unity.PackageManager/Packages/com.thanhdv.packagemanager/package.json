@@ -1,0 +1,13 @@
+{
+  "name": "com.thanhdv.packagemanager",
+  "displayName": "ThanhDV Package Manager",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "Browse, import and remove packages from the ThanhDV package server (.unitypackage and UPM).",
+  "author": {
+    "name": "ThanhDV"
+  },
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  }
+}

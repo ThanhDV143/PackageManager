@@ -1,0 +1,24 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement class="window">
+        <uie:Toolbar>
+            <uie:ToolbarSpacer class="toolbar-flex" />
+            <uie:ToolbarSearchField name="search" class="search" />
+            <uie:ToolbarButton name="settings" tooltip="Settings" class="icon-button" />
+        </uie:Toolbar>
+        <ui:VisualElement class="body">
+            <ui:VisualElement name="sidebar" class="sidebar" />
+            <ui:TwoPaneSplitView name="split" fixed-pane-index="0" fixed-pane-initial-dimension="300" orientation="Horizontal" class="split">
+                <ui:VisualElement class="list-pane">
+                    <ui:VisualElement name="list-message" class="list-message" />
+                    <ui:ListView name="list" fixed-item-height="40" selection-type="Single" class="package-list" />
+                </ui:VisualElement>
+                <ui:ScrollView name="details-scroll" class="details-scroll" />
+            </ui:TwoPaneSplitView>
+        </ui:VisualElement>
+        <ui:VisualElement class="footer">
+            <ui:Label name="status" class="t small nowrap footer__status" />
+            <ui:ProgressBar name="progress" low-value="0" high-value="1" class="footer__progress" />
+            <ui:Button name="refresh" tooltip="Refresh" class="icon-button footer__refresh" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

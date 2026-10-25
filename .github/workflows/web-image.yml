@@ -3,7 +3,7 @@ name: Web image
 on:
   push:
     branches: [main]
-    paths: ["Web/**", ".github/workflows/web-image.yml"]
+    paths: ["Web/**", "Unity.PackageManager/Packages/com.thanhdv.packagemanager/Editor/Shared/**", ".github/workflows/web-image.yml"]
   workflow_dispatch:
 
 permissions:

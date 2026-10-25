@@ -1,0 +1,8 @@
+.tdv {
+    --tdv-green: #0F5A1C;
+    --tdv-amber: #6E4700;
+    --tdv-red: #A80000;
+    --tdv-blue: #0645AD;
+    /* --unity-colors-highlight-text is blue on 2022.3; the design wants white on the selection. */
+    --tdv-selected-text: #FFFFFF;
+}

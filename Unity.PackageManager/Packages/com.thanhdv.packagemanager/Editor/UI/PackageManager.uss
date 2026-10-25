@@ -1,0 +1,574 @@
+/*
+ * Shared by the main window, the Remove dialog and the Project Settings page.
+ * Editor colors come from --unity-colors-* and accents from --tdv-* (ThemeDark.uss / ThemeLight.uss).
+ * Never give var() a fallback: on 2022.3 var(--x, fallback) resolves to transparent even when --x exists.
+ */
+
+.t {
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+}
+
+.small {
+    font-size: 11px;
+}
+
+.dim {
+    opacity: 0.75;
+}
+
+.nowrap {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wrap {
+    white-space: normal;
+}
+
+/* ---------- Buttons ---------- */
+
+.tdv-button {
+    height: 20px;
+    margin: 0 4px 4px 0;
+    padding: 0 8px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.tdv-button--primary {
+    -unity-font-style: bold;
+}
+
+.icon-button {
+    width: 28px;
+    height: 20px;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-width: 0 0 0 1px;
+    border-radius: 0;
+    border-color: var(--unity-colors-toolbar-border);
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.icon-button:hover {
+    background-color: var(--unity-colors-highlight-background-hover);
+}
+
+/* ---------- Window ---------- */
+
+.window {
+    flex-grow: 1;
+    background-color: var(--unity-colors-window-background);
+}
+
+.toolbar-flex {
+    flex-grow: 1;
+}
+
+.search {
+    width: 240px;
+    margin-right: 4px;
+}
+
+.body {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+.sidebar {
+    width: 150px;
+    flex-shrink: 0;
+    padding-top: 6px;
+    background-color: var(--unity-colors-default-background);
+    border-right-width: 1px;
+    border-color: var(--unity-colors-default-border);
+}
+
+.sidebar-item {
+    height: 24px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px 0 10px;
+}
+
+.sidebar-item:hover {
+    background-color: var(--unity-colors-highlight-background-hover);
+}
+
+.sidebar-item--selected,
+.sidebar-item--selected:hover {
+    background-color: var(--unity-colors-highlight-background);
+}
+
+.sidebar-item--selected > Label {
+    color: var(--tdv-selected-text);
+}
+
+.split {
+    flex-grow: 1;
+}
+
+.split .unity-two-pane-split-view__dragline-anchor {
+    width: 1px;
+    background-color: var(--unity-colors-default-border);
+}
+
+.list-pane {
+    min-width: 200px;
+}
+
+.package-list {
+    flex-grow: 1;
+}
+
+.list-message {
+    padding: 24px 16px;
+    align-items: center;
+}
+
+.list-message__icon {
+    margin-bottom: 6px;
+}
+
+.list-message__text {
+    opacity: 0.75;
+    white-space: normal;
+    -unity-text-align: upper-center;
+}
+
+.package-row {
+    height: 40px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 8px 0 10px;
+}
+
+.package-row--gone {
+    opacity: 0.5;
+}
+
+.package-row__text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    overflow: hidden;
+}
+
+.package-row__sub {
+    margin-top: 2px;
+}
+
+.package-row__version {
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.package-row__mark {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-left: 4px;
+    align-items: center;
+    justify-content: center;
+}
+
+.package-row__check {
+    -unity-font-style: bold;
+    color: var(--tdv-green);
+    -unity-text-align: middle-center;
+}
+
+.unity-collection-view__item--selected .package-row Label {
+    color: var(--tdv-selected-text);
+}
+
+/* ---------- Details ---------- */
+
+.details-scroll {
+    flex-grow: 1;
+}
+
+.details {
+    padding: 12px 14px 16px 14px;
+}
+
+.details-empty {
+    padding-top: 70px;
+    opacity: 0.75;
+    -unity-text-align: upper-center;
+}
+
+.details__title {
+    font-size: 19px;
+    -unity-font-style: bold;
+    white-space: normal;
+}
+
+.details__subtitle {
+    margin-top: 2px;
+    font-size: 11px;
+    opacity: 0.75;
+    white-space: normal;
+}
+
+.details__image {
+    margin-top: 10px;
+    height: 150px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-width: 1px;
+    border-radius: 2px;
+    border-color: var(--unity-colors-default-border);
+    background-color: var(--unity-colors-default-background);
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.details__image-placeholder {
+    opacity: 0.5;
+}
+
+.details__state {
+    margin-top: 10px;
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.details__state-icon {
+    margin-right: 6px;
+}
+
+.details__state-text {
+    flex-shrink: 1;
+    white-space: normal;
+    opacity: 0.75;
+}
+
+.details__state--installed .details__state-text {
+    opacity: 1;
+    -unity-font-style: bold;
+    color: var(--tdv-green);
+}
+
+.details__state--warning .details__state-text {
+    opacity: 1;
+    -unity-font-style: bold;
+    color: var(--tdv-amber);
+}
+
+.details__state--dim .details__state-text {
+    opacity: 0.5;
+    -unity-font-style: italic;
+}
+
+.details__loading {
+    margin-top: 8px;
+    opacity: 0.75;
+    -unity-font-style: italic;
+}
+
+.details__actions {
+    margin-top: 8px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.details__version {
+    width: 130px;
+    height: 20px;
+    margin: 0 4px 4px 0;
+}
+
+.tabs {
+    margin-top: 6px;
+    height: 24px;
+    flex-shrink: 0;
+    flex-direction: row;
+    border-bottom-width: 1px;
+    border-color: var(--unity-colors-default-border);
+}
+
+.tab {
+    height: 24px;
+    margin: 0 2px 0 0;
+    padding: 0 10px;
+    border-width: 0 0 2px 0;
+    border-radius: 0;
+    border-color: rgba(0, 0, 0, 0);
+    background-color: rgba(0, 0, 0, 0);
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.tab:hover {
+    opacity: 1;
+    background-color: var(--unity-colors-highlight-background-hover);
+}
+
+.tab:active {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.tab--selected,
+.tab--selected:hover {
+    opacity: 1;
+    border-bottom-color: var(--tdv-blue);
+}
+
+.tab-content {
+    padding-top: 10px;
+}
+
+.tab-content--versions {
+    padding-top: 2px;
+}
+
+/* Description / README blocks */
+
+.rich {
+    margin: 0 0 8px 0;
+    white-space: normal;
+}
+
+.rich--h1 {
+    margin: 12px 0 4px 0;
+    font-size: 17px;
+    -unity-font-style: bold;
+}
+
+.rich--h2 {
+    margin: 12px 0 4px 0;
+    font-size: 15px;
+    -unity-font-style: bold;
+}
+
+.rich--h3 {
+    margin: 12px 0 4px 0;
+    font-size: 13px;
+    -unity-font-style: bold;
+}
+
+.rich--first {
+    margin-top: 0;
+}
+
+.rich--list {
+    padding-left: 14px;
+}
+
+.rich--code {
+    color: var(--tdv-amber);
+}
+
+.rich--rule {
+    height: 1px;
+    margin: 10px 0;
+    background-color: var(--unity-colors-default-border);
+}
+
+/* Versions tab */
+
+.version-row {
+    padding: 8px 0;
+    border-bottom-width: 1px;
+    border-color: var(--unity-colors-default-border);
+}
+
+.version-row__head {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.version-row__number {
+    margin-right: 6px;
+    -unity-font-style: bold;
+}
+
+.badge {
+    height: 14px;
+    margin: 0 4px 0 0;
+    padding: 0 4px;
+    border-width: 1px;
+    border-radius: 2px;
+    font-size: 10px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.badge--latest {
+    border-color: var(--tdv-blue);
+    color: var(--tdv-blue);
+}
+
+.badge--in-use {
+    border-color: var(--tdv-green);
+    color: var(--tdv-green);
+}
+
+.version-row__meta {
+    margin-left: 2px;
+}
+
+.version-row__notes {
+    margin-top: 4px;
+    white-space: normal;
+}
+
+/* Dependencies tab */
+
+.deps-note {
+    margin-bottom: 6px;
+}
+
+.dep-row {
+    height: 20px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* ---------- Status bar ---------- */
+
+.footer {
+    height: 20px;
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 8px;
+    background-color: var(--unity-colors-toolbar-background);
+    border-top-width: 1px;
+    border-color: var(--unity-colors-toolbar-border);
+}
+
+.footer__status {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.footer__status--error {
+    color: var(--tdv-red);
+}
+
+.footer__progress {
+    width: 160px;
+    height: 12px;
+    flex-shrink: 0;
+    margin: 0 0 0 8px;
+    padding: 0;
+}
+
+.footer__progress .unity-progress-bar__container {
+    min-height: 12px;
+    height: 12px;
+    margin: 0;
+}
+
+.footer__progress .unity-progress-bar__background {
+    border-width: 1px;
+    border-radius: 2px;
+    border-color: var(--unity-colors-input_field-border);
+    background-color: var(--unity-colors-input_field-background);
+}
+
+.footer__progress .unity-progress-bar__progress {
+    background-color: var(--tdv-blue);
+}
+
+.footer__progress .unity-progress-bar__title-container {
+    display: none;
+}
+
+.footer__refresh {
+    height: 19px;
+    margin-left: 8px;
+}
+
+/* ---------- Remove dialog ---------- */
+
+.remove {
+    flex-grow: 1;
+    padding: 10px;
+    background-color: var(--unity-colors-window-background);
+}
+
+.remove__note {
+    margin: 6px 0;
+}
+
+.remove__tree {
+    flex-grow: 1;
+    padding-top: 2px;
+    border-width: 1px;
+    border-color: var(--unity-colors-default-border);
+    background-color: var(--unity-colors-default-background);
+}
+
+.file-row {
+    height: 20px;
+    flex-direction: row;
+    align-items: center;
+    padding-right: 6px;
+}
+
+.file-row:hover {
+    background-color: var(--unity-colors-highlight-background-hover);
+}
+
+.file-row__toggle {
+    margin: 0 4px 0 0;
+}
+
+.file-row__icon {
+    margin-right: 4px;
+}
+
+.file-row--off .file-row__name {
+    opacity: 0.6;
+}
+
+.remove__buttons {
+    margin-top: 8px;
+    flex-direction: row;
+    align-items: center;
+}
+
+.remove__buttons .tdv-button {
+    margin: 0 4px 0 0;
+}
+
+.remove__confirm {
+    padding: 0 10px;
+}
+
+/* ---------- Project Settings ---------- */
+
+.settings {
+    padding: 10px;
+}
+
+.settings__title {
+    margin-bottom: 10px;
+    font-size: 19px;
+    -unity-font-style: bold;
+}
+
+.settings__url {
+    margin: 0;
+}
+
+.settings__url > .unity-base-field__label {
+    width: 150px;
+    min-width: 150px;
+}
+
+.settings__help {
+    margin: 8px 0 0 0;
+}
