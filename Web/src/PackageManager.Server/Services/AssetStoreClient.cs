@@ -5,7 +5,10 @@ using PackageManager.Shared;
 
 namespace PackageManager.Server.Services;
 
-public class AssetStoreException(string message) : Exception(message);
+public class AssetStoreException(Text text) : Exception(text.En)
+{
+    public Text Text { get; } = text;
+}
 
 /// <summary>
 /// Reads package metadata from a public Asset Store page. The page embeds a normalized cache
@@ -33,19 +36,23 @@ public class AssetStoreClient(HttpClient http, HtmlContent html, TimeProvider cl
     public async Task<PackageEditDto> FetchAsync(string url, CancellationToken ct)
     {
         if (!TryNormalizeUrl(url, out var uri, out string slug))
-            throw new AssetStoreException("Link không hợp lệ. Dùng link dạng https://assetstore.unity.com/packages/…/ten-123456.");
+            throw new AssetStoreException(new Text(
+                "Link không hợp lệ. Dùng link dạng https://assetstore.unity.com/packages/…/ten-123456.",
+                "Invalid link. Use a link like https://assetstore.unity.com/packages/…/name-123456."));
 
         string page;
         try
         {
             using var res = await http.GetAsync(uri, ct);
-            if (res.StatusCode == HttpStatusCode.NotFound) throw new AssetStoreException("Asset Store trả về 404 — kiểm tra lại link.");
+            if (res.StatusCode == HttpStatusCode.NotFound)
+                throw new AssetStoreException(new Text("Asset Store trả về 404 — kiểm tra lại link.", "Asset Store returned 404 — check the link."));
             res.EnsureSuccessStatusCode();
             page = await res.Content.ReadAsStringAsync(ct);
         }
         catch (HttpRequestException ex)
         {
-            throw new AssetStoreException($"Không tải được trang Asset Store ({ex.StatusCode?.ToString() ?? ex.Message}).");
+            string reason = ex.StatusCode?.ToString() ?? ex.Message;
+            throw new AssetStoreException(new Text($"Không tải được trang Asset Store ({reason}).", $"Could not load the Asset Store page ({reason})."));
         }
 
         try
@@ -55,7 +62,9 @@ public class AssetStoreClient(HttpClient http, HtmlContent html, TimeProvider cl
         catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
         {
             log.LogWarning(ex, "Could not parse Asset Store page {Url}", uri);
-            throw new AssetStoreException("Không đọc được dữ liệu, hãy nhập tay. Trang Asset Store có thể đã đổi cấu trúc.");
+            throw new AssetStoreException(new Text(
+                "Không đọc được dữ liệu, hãy nhập tay. Trang Asset Store có thể đã đổi cấu trúc.",
+                "Could not read the page data; fill the fields in by hand. The Asset Store page layout may have changed."));
         }
     }
 

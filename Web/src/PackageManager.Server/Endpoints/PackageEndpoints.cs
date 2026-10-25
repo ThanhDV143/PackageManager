@@ -20,24 +20,24 @@ public static class PackageEndpoints
         g.MapGet("/{packageId}", async (string packageId, PackageService svc, CancellationToken ct) =>
             await svc.FindAsync(packageId, ct) is { } p ? Results.Ok(PackageService.ToDetail(p)) : Results.NotFound());
 
-        g.MapGet("/{packageId}/download", async (string packageId, PackageService svc, FileStore files, CancellationToken ct) =>
+        g.MapGet("/{packageId}/download", async (string packageId, PackageService svc, FileStore files, HttpContext ctx, CancellationToken ct) =>
             await svc.FindAsync(packageId, ct) is { } p && PackageService.Latest(p.Versions) is { } v
-                ? FileResult(files, v)
+                ? FileResult(ctx, files, v)
                 : Results.NotFound());
 
-        g.MapPost("/", async (PackageEditDto dto, PackageService svc, AppDbContext db, CancellationToken ct) =>
+        g.MapPost("/", async (PackageEditDto dto, PackageService svc, AppDbContext db, HttpContext ctx, CancellationToken ct) =>
         {
             var p = new Package { CreatedAt = svc.Now };
-            if (await svc.ApplyAsync(p, dto, ct) is { } error) return Results.BadRequest(new ApiError { Message = error });
+            if (await svc.ApplyAsync(p, dto, ct) is { } error) return Results.BadRequest(ctx.Error(error));
             db.Packages.Add(p);
             await db.SaveChangesAsync(ct);
             return Results.Ok(PackageService.ToDetail(p));
         }).RequireAuthorization();
 
-        g.MapPut("/{packageId}", async (string packageId, PackageEditDto dto, PackageService svc, AppDbContext db, CancellationToken ct) =>
+        g.MapPut("/{packageId}", async (string packageId, PackageEditDto dto, PackageService svc, AppDbContext db, HttpContext ctx, CancellationToken ct) =>
         {
             if (await svc.FindAsync(packageId, ct) is not { } p) return Results.NotFound();
-            if (await svc.ApplyAsync(p, dto, ct) is { } error) return Results.BadRequest(new ApiError { Message = error });
+            if (await svc.ApplyAsync(p, dto, ct) is { } error) return Results.BadRequest(ctx.Error(error));
             await db.SaveChangesAsync(ct);
             return Results.Ok(PackageService.ToDetail(p));
         }).RequireAuthorization();
@@ -53,18 +53,19 @@ public static class PackageEndpoints
             return Results.NoContent();
         }).RequireAuthorization();
 
-        g.MapPost("/{packageId}/refresh", async (string packageId, PackageService svc, AssetStoreClient store, AppDbContext db, CancellationToken ct) =>
+        g.MapPost("/{packageId}/refresh", async (string packageId, PackageService svc, AssetStoreClient store, AppDbContext db, HttpContext ctx, CancellationToken ct) =>
         {
             if (await svc.FindAsync(packageId, ct) is not { } p) return Results.NotFound();
-            if (string.IsNullOrEmpty(p.AssetStoreUrl)) return Results.BadRequest(new ApiError { Message = "Package chưa có link Asset Store." });
+            if (string.IsNullOrEmpty(p.AssetStoreUrl))
+                return Results.BadRequest(ctx.Error(new Text("Package chưa có link Asset Store.", "This package has no Asset Store link.")));
             PackageEditDto fresh;
             try { fresh = await store.FetchAsync(p.AssetStoreUrl, ct); }
-            catch (AssetStoreException ex) { return Results.BadRequest(new ApiError { Message = ex.Message }); }
+            catch (AssetStoreException ex) { return Results.BadRequest(ctx.Error(ex.Text)); }
 
             // Keep the admin's own ID and name; refresh everything read from the store.
             fresh.PackageId = p.PackageId;
             fresh.DisplayName = p.DisplayName;
-            if (await svc.ApplyAsync(p, fresh, ct) is { } error) return Results.BadRequest(new ApiError { Message = error });
+            if (await svc.ApplyAsync(p, fresh, ct) is { } error) return Results.BadRequest(ctx.Error(error));
             await db.SaveChangesAsync(ct);
             return Results.Ok(PackageService.ToDetail(p));
         }).RequireAuthorization();
@@ -73,8 +74,8 @@ public static class PackageEndpoints
 
         var versions = app.MapGroup("/api/versions");
 
-        versions.MapGet("/{id:int}/download", async (int id, AppDbContext db, FileStore files, CancellationToken ct) =>
-            await db.PackageVersions.AsNoTracking().FirstOrDefaultAsync(v => v.Id == id, ct) is { } v ? FileResult(files, v) : Results.NotFound());
+        versions.MapGet("/{id:int}/download", async (int id, AppDbContext db, FileStore files, HttpContext ctx, CancellationToken ct) =>
+            await db.PackageVersions.AsNoTracking().FirstOrDefaultAsync(v => v.Id == id, ct) is { } v ? FileResult(ctx, files, v) : Results.NotFound());
 
         versions.MapDelete("/{id:int}", async (int id, bool? deleteFile, AppDbContext db, FileStore files, CancellationToken ct) =>
         {
@@ -121,11 +122,13 @@ public static class PackageEndpoints
             limit.MaxRequestBodySize = null;
 
         version = version.Trim();
-        if (!PackageService.IsValidVersion(version)) return Results.BadRequest(new ApiError { Message = "Phiên bản không hợp lệ." });
-        if (!FileStore.IsAllowed(fileName)) return Results.BadRequest(new ApiError { Message = "Chỉ nhận file .unitypackage hoặc file nén." });
-        if (await svc.FindAsync(packageId, ct) is not { } p) return Results.NotFound(new ApiError { Message = "Không tìm thấy package đích." });
+        if (!PackageService.IsValidVersion(version)) return Results.BadRequest(ctx.Error(new Text("Phiên bản không hợp lệ.", "Invalid version.")));
+        if (!FileStore.IsAllowed(fileName))
+            return Results.BadRequest(ctx.Error(new Text("Chỉ nhận file .unitypackage hoặc file nén.", "Only .unitypackage files or archives are accepted.")));
+        if (await svc.FindAsync(packageId, ct) is not { } p)
+            return Results.NotFound(ctx.Error(new Text("Không tìm thấy package đích.", "Target package not found.")));
         if (p.Versions.Any(v => v.Version == version))
-            return Results.Conflict(new ApiError { Message = $"{p.DisplayName} đã có phiên bản {version}." });
+            return Results.Conflict(ctx.Error(new Text($"{p.DisplayName} đã có phiên bản {version}.", $"{p.DisplayName} already has version {version}.")));
 
         string? notes = ctx.Request.Headers["X-Release-Notes"].FirstOrDefault() is { Length: > 0 } raw ? Uri.UnescapeDataString(raw) : null;
 
@@ -136,7 +139,8 @@ public static class PackageEndpoints
         }
         catch (Exception ex) when (ex is IOException or OperationCanceledException or BadHttpRequestException)
         {
-            return Results.BadRequest(new ApiError { Message = "Mất kết nối khi đang tải lên. File chưa được lưu." });
+            return Results.BadRequest(ctx.Error(new Text(
+                "Mất kết nối khi đang tải lên. File chưa được lưu.", "The connection dropped during upload. The file was not saved.")));
         }
 
         var entity = new PackageVersion
@@ -156,8 +160,8 @@ public static class PackageEndpoints
         return Results.Ok(PackageService.ToVersion(entity, PackageService.Latest(p.Versions) == entity));
     }
 
-    private static IResult FileResult(FileStore files, PackageVersion v) =>
+    private static IResult FileResult(HttpContext ctx, FileStore files, PackageVersion v) =>
         files.Resolve(v.RelativePath) is { } path && File.Exists(path)
             ? Results.File(path, "application/octet-stream", v.FileName, enableRangeProcessing: true)
-            : Results.NotFound(new ApiError { Message = "File không còn trên ổ đĩa." });
+            : Results.NotFound(ctx.Error(new Text("File không còn trên ổ đĩa.", "The file is no longer on disk.")));
 }

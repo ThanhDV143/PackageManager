@@ -13,7 +13,7 @@ public static class ExternalEndpoints
     {
         app.MapGet("/api/upm", (VerdaccioClient upm, CancellationToken ct) => upm.ListAsync(ct));
 
-        app.MapGet("/api/upm/{name}", async (string name, VerdaccioClient upm, CancellationToken ct) =>
+        app.MapGet("/api/upm/{name}", async (string name, VerdaccioClient upm, HttpContext ctx, CancellationToken ct) =>
         {
             // Only packages published to Verdaccio; uplink caches (com.unity.* etc.) stay hidden even by direct link.
             var list = await upm.ListAsync(ct);
@@ -23,17 +23,18 @@ public static class ExternalEndpoints
             try { detail = await upm.GetDetailAsync(name, ct); }
             catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException)
             {
-                return Results.Json(new ApiError { Message = "Không kết nối được registry UPM." }, statusCode: StatusCodes.Status502BadGateway);
+                return Results.Json(ctx.Error(new Text("Không kết nối được registry UPM.", "Cannot reach the UPM registry.")),
+                    statusCode: StatusCodes.Status502BadGateway);
             }
             if (detail == null) return Results.NotFound();
             detail.KnownPackages = list.Packages.Select(p => p.Name).ToList();
             return Results.Ok(detail);
         });
 
-        app.MapGet("/api/assetstore", async (string url, AssetStoreClient store, CancellationToken ct) =>
+        app.MapGet("/api/assetstore", async (string url, AssetStoreClient store, HttpContext ctx, CancellationToken ct) =>
         {
             try { return Results.Ok(await store.FetchAsync(url, ct)); }
-            catch (AssetStoreException ex) { return Results.BadRequest(new ApiError { Message = ex.Message }); }
+            catch (AssetStoreException ex) { return Results.BadRequest(ctx.Error(ex.Text)); }
         }).RequireAuthorization();
 
         app.MapGet("/api/search", SearchAsync);

@@ -58,26 +58,29 @@ public static class UnmanagedEndpoints
             };
         });
 
-        g.MapPost("/assign", async (AssignFilesRequest req, AppDbContext db, FileStore files, PackageService svc, CancellationToken ct) =>
+        g.MapPost("/assign", async (AssignFilesRequest req, AppDbContext db, FileStore files, PackageService svc, HttpContext ctx, CancellationToken ct) =>
         {
-            if (await svc.FindAsync(req.PackageId, ct) is not { } p) return Results.NotFound(new ApiError { Message = "Không tìm thấy package." });
-            if (req.Files.Count == 0) return Results.BadRequest(new ApiError { Message = "Chưa chọn file nào." });
+            if (await svc.FindAsync(req.PackageId, ct) is not { } p) return Results.NotFound(ctx.Error(new Text("Không tìm thấy package.", "Package not found.")));
+            if (req.Files.Count == 0) return Results.BadRequest(ctx.Error(new Text("Chưa chọn file nào.", "No files selected.")));
 
             var taken = p.Versions.Select(v => v.Version).ToHashSet();
             foreach (var item in req.Files)
             {
                 string version = item.Version?.Trim() ?? "";
                 if (!PackageService.IsValidVersion(version))
-                    return Results.BadRequest(new ApiError { Message = $"Nhập phiên bản hợp lệ cho {Path.GetFileName(item.RelativePath)}." });
+                {
+                    string name = Path.GetFileName(item.RelativePath);
+                    return Results.BadRequest(ctx.Error(new Text($"Nhập phiên bản hợp lệ cho {name}.", $"Enter a valid version for {name}.")));
+                }
                 if (!taken.Add(version))
-                    return Results.Conflict(new ApiError { Message = $"{p.DisplayName} đã có phiên bản {version}." });
+                    return Results.Conflict(ctx.Error(new Text($"{p.DisplayName} đã có phiên bản {version}.", $"{p.DisplayName} already has version {version}.")));
 
                 string? full = files.Resolve(item.RelativePath);
                 if (full == null || !File.Exists(full) || !FileStore.IsAllowed(full))
-                    return Results.BadRequest(new ApiError { Message = $"Không tìm thấy file {item.RelativePath}." });
+                    return Results.BadRequest(ctx.Error(new Text($"Không tìm thấy file {item.RelativePath}.", $"File {item.RelativePath} not found.")));
                 string rel = files.ToRelative(full);
                 if (await db.PackageVersions.AnyAsync(v => v.RelativePath == rel, ct))
-                    return Results.Conflict(new ApiError { Message = $"{rel} đã thuộc một package khác." });
+                    return Results.Conflict(ctx.Error(new Text($"{rel} đã thuộc một package khác.", $"{rel} already belongs to another package.")));
 
                 var info = new FileInfo(full);
                 p.Versions.Add(new PackageVersion

@@ -80,6 +80,7 @@ window.pm = (() => {
             xhr.onabort = () => done(-1);
             xhr.open('PUT', url);
             xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+            xhr.setRequestHeader('Accept-Language', 'vi'); // server error messages in Vietnamese, as in Program.cs
             if (releaseNotes) xhr.setRequestHeader('X-Release-Notes', encodeURIComponent(releaseNotes));
             xhr.send(file);
         });

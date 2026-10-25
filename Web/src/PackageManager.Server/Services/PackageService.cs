@@ -112,16 +112,18 @@ public partial class PackageService(AppDbContext db, HtmlContent html, TimeProvi
         versions.OrderByDescending(v => v.Version, VersionComparer.Instance).ThenByDescending(v => v.UploadedAt).FirstOrDefault();
 
     /// <summary>Validates and copies editable fields. Returns an error message, or null on success.</summary>
-    public async Task<string?> ApplyAsync(Package p, PackageEditDto dto, CancellationToken ct)
+    public async Task<Text?> ApplyAsync(Package p, PackageEditDto dto, CancellationToken ct)
     {
         string id = dto.PackageId.Trim().ToLowerInvariant();
-        if (!IsValidPackageId(id)) return "ID chỉ gồm chữ thường, số, dấu chấm, gạch ngang (vd. com.moremountains.feel).";
-        if (string.IsNullOrWhiteSpace(dto.DisplayName)) return "Tên hiển thị không được để trống.";
+        if (!IsValidPackageId(id))
+            return new Text("ID chỉ gồm chữ thường, số, dấu chấm, gạch ngang (vd. com.moremountains.feel).",
+                "The ID may only contain lowercase letters, digits, dots and hyphens (e.g. com.moremountains.feel).");
+        if (string.IsNullOrWhiteSpace(dto.DisplayName)) return new Text("Tên hiển thị không được để trống.", "Display name is required.");
         if (!string.Equals(id, p.PackageId, StringComparison.OrdinalIgnoreCase) &&
             await db.Packages.AnyAsync(x => x.PackageId == id && x.Id != p.Id, ct))
-            return $"ID \"{id}\" đã tồn tại.";
+            return new Text($"ID \"{id}\" đã tồn tại.", $"ID \"{id}\" already exists.");
         if (!string.IsNullOrWhiteSpace(dto.AssetStoreUrl) && !AssetStoreClient.TryNormalizeUrl(dto.AssetStoreUrl, out _, out _))
-            return "Link Asset Store không hợp lệ.";
+            return new Text("Link Asset Store không hợp lệ.", "Invalid Asset Store link.");
 
         p.PackageId = id;
         p.DisplayName = Limit(dto.DisplayName, 200)!;
