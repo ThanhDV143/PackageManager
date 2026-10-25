@@ -15,6 +15,7 @@
 #
 .vscode
 .codegraph
+.claude
 .utmp/
 /[Ll]ibrary/
 /[Tt]emp/
