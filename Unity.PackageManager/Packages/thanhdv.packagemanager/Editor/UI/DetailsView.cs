@@ -206,15 +206,20 @@ namespace ThanhDV.PackageManager
             else if (info.isDirectDependency) StatusLine($"✓ Installed {info.version}", State.Installed);
             else StatusLine($"✓ Installed {info.version} (as a dependency of another package)", State.Installed);
 
+            var udeps = info == null ? new Dictionary<string, string>() : DependencyImporter.Of(info);
+            var unmet = udeps.Where(d => !DependencyImporter.IsMet(ProjectData.Instance.Find(d.Key), d.Value))
+                .OrderBy(d => d.Key, StringComparer.Ordinal).Select(d => Requirement(d.Key, d.Value)).ToList();
+            if (unmet.Count > 0) StatusLine("Needs Unity packages: " + string.Join(", ", unmet), State.Warning);
+
             if (!loaded)
             {
                 Add(Text(_loadError ?? "Loading details…", "details__loading"));
-                if (_loadError != null && info != null) Actions(row => UpmInstalledButtons(row, info));
+                if (_loadError != null && info != null) Actions(row => UpmInstalledButtons(row, info, unmet.Count > 0));
                 return;
             }
             if (gone)
             {
-                if (info != null) Actions(row => UpmInstalledButtons(row, info));
+                if (info != null) Actions(row => UpmInstalledButtons(row, info, unmet.Count > 0));
                 return;
             }
 
@@ -229,7 +234,7 @@ namespace ThanhDV.PackageManager
                     string label = current ? "Installed" : (info != null ? "Switch to " : "Install ") + selected.Version;
                     row.Add(ActionButton(label, () => Install(detail, selected.Version), !current, primary: true));
                 }
-                if (info != null) UpmInstalledButtons(row, info);
+                if (info != null) UpmInstalledButtons(row, info, unmet.Count > 0);
                 row.Add(ActionButton("Open on Web", () => Application.OpenURL(ServerClient.UpmPageUrl(detail.Name))));
                 if (!string.IsNullOrWhiteSpace(detail.RepositoryUrl))
                     row.Add(ActionButton("Repository", () => Application.OpenURL(detail.RepositoryUrl)));
@@ -261,6 +266,23 @@ namespace ThanhDV.PackageManager
                         row.Add(Text(dep.Value, "dim"));
                         content.Add(row);
                     }
+
+                if (udeps.Count > 0)
+                {
+                    content.Add(Text($"Unity packages the installed {info.version} needs (udependencies):", "small", "dim", "wrap", "deps-note", "deps-note--section"));
+                    foreach (var dep in udeps.OrderBy(d => d.Key, StringComparer.Ordinal))
+                    {
+                        var record = ProjectData.Instance.Find(dep.Key);
+                        string state = record == null ? "not imported"
+                            : DependencyImporter.IsMet(record, dep.Value) ? "✓ " + record.Version
+                            : record.Version + ", too old";
+                        var row = new VisualElement();
+                        row.AddToClassList("dep-row");
+                        row.Add(Text(dep.Key, "nowrap"));
+                        row.Add(Text(string.IsNullOrEmpty(dep.Value) ? state : $"{dep.Value}+ · {state}", "dim"));
+                        content.Add(row);
+                    }
+                }
             }
             else
             {
@@ -273,8 +295,23 @@ namespace ThanhDV.PackageManager
             }
         }
 
-        private void UpmInstalledButtons(VisualElement row, PackageInfo info)
+        /// <summary>"Feel 5.5+" when not imported, "DOTween 1.0 (needs 1.2+)" when too old.</summary>
+        private static string Requirement(string packageId, string minVersion)
         {
+            var record = ProjectData.Instance.Find(packageId);
+            if (record != null) return $"{record.DisplayName} {record.Version} (needs {minVersion}+)";
+            return string.IsNullOrEmpty(minVersion) ? packageId : $"{packageId} {minVersion}+";
+        }
+
+        private void UpmInstalledButtons(VisualElement row, PackageInfo info, bool unmetDependencies)
+        {
+            // Waits while the queue or an import is already on it; the window re-renders when that ends.
+            if (unmetDependencies)
+                row.Add(ActionButton("Import dependencies", () =>
+                {
+                    DependencyImporter.Enqueue(info);
+                    Render();
+                }, !DependencyImporter.IsQueued(info.name) && ImportTracker.ImportingPackageId == null));
             var remove = ActionButton("Remove", () => RemoveUpm(info.name), info.isDirectDependency);
             if (!info.isDirectDependency) remove.tooltip = "Installed as a dependency — remove the package that needs it first.";
             row.Add(remove);

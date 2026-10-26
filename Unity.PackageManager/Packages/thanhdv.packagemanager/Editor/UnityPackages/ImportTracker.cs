@@ -24,6 +24,8 @@ namespace ThanhDV.PackageManager
             public string version;
             public string fileStem;
             public long startedTicks;
+            /// <summary>The UPM package this is a dependency of; empty for the user's own import.</summary>
+            public string requiredBy;
         }
 
         static ImportTracker()
@@ -54,7 +56,8 @@ namespace ThanhDV.PackageManager
         /// <summary>The outcome of a tracked import, for the status bar: (message, isError).</summary>
         public static event Action<string, bool> Finished;
 
-        public static void Import(string packageId, string displayName, string version, string path)
+        /// <param name="requiredBy">The UPM package whose "udependencies" asks for this one; null for the user's own import.</param>
+        public static void Import(string packageId, string displayName, string version, string path, string requiredBy = null)
         {
             Save(new Pending
             {
@@ -63,6 +66,7 @@ namespace ThanhDV.PackageManager
                 version = version,
                 fileStem = Path.GetFileNameWithoutExtension(path),
                 startedTicks = DateTime.UtcNow.Ticks,
+                requiredBy = requiredBy,
             });
             Changed?.Invoke();
             // Interactive: Unity's own dialog lets the user pick which items to import.
@@ -76,7 +80,9 @@ namespace ThanhDV.PackageManager
             var pending = Load();
             if (pending == null) return;
             var guids = items.Select(AssetDatabase.AssetPathToGUID).Where(g => !string.IsNullOrEmpty(g));
-            ProjectData.Instance.RecordImport(pending.packageId, pending.displayName, pending.version, guids, DateTime.UtcNow);
+            // JsonUtility gives back a null string as "".
+            string requiredBy = string.IsNullOrEmpty(pending.requiredBy) ? null : pending.requiredBy;
+            ProjectData.Instance.RecordImport(pending.packageId, pending.displayName, pending.version, guids, DateTime.UtcNow, requiredBy);
             Save(null);
             ProjectData.Instance.Save();
             Changed?.Invoke();

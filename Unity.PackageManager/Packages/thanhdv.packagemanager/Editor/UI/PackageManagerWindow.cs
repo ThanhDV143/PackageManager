@@ -63,6 +63,7 @@ namespace ThanhDV.PackageManager
             ImportTracker.Changed += OnLocalChange;
             ImportTracker.Finished += OnActionFinished;
             PackageRemover.Removed += OnActionFinished;
+            DependencyImporter.Status += OnActionFinished;
             UnityEditor.PackageManager.Events.registeredPackages += OnRegisteredPackages;
         }
 
@@ -72,6 +73,7 @@ namespace ThanhDV.PackageManager
             ImportTracker.Changed -= OnLocalChange;
             ImportTracker.Finished -= OnActionFinished;
             PackageRemover.Removed -= OnActionFinished;
+            DependencyImporter.Status -= OnActionFinished;
             UnityEditor.PackageManager.Events.registeredPackages -= OnRegisteredPackages;
             // Importing scripts or installing a UPM package reloads the domain right after the action ends;
             // carry its outcome over to the rebuilt window.
@@ -222,7 +224,7 @@ namespace ThanhDV.PackageManager
             else RebuildItems();
         }
 
-        /// <summary>Import and Remove outcomes, reported by ImportTracker / PackageRemover.</summary>
+        /// <summary>Import and Remove outcomes, reported by ImportTracker / PackageRemover / DependencyImporter.</summary>
         private void OnActionFinished(string message, bool isError) => SetStatus(message, isError);
 
         private void OnRegisteredPackages(UnityEditor.PackageManager.PackageRegistrationEventArgs args)

@@ -428,6 +428,10 @@
     margin-bottom: 6px;
 }
 
+.deps-note--section {
+    margin-top: 12px;
+}
+
 .dep-row {
     height: 20px;
     flex-direction: row;

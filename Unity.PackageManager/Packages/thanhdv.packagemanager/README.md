@@ -49,3 +49,27 @@ Open **Tools > ThanhDV > Package Manager**.
 - **In Project**: everything this project already uses from the portal.
 
 Imported packages are tracked in `ProjectSettings/ThanhDV.PackageManager.json`. Commit it so the team shares the same state.
+
+## Unity package dependencies (`udependencies`)
+
+A UPM package can list `.unitypackage` packages from the portal that it needs, by package id and minimum version:
+
+```json
+{
+  "name": "com.thanhdv.tool",
+  "version": "1.0.0",
+  "udependencies": {
+    "com.thanhdv.some-asset": "1.2.0"
+  }
+}
+```
+
+When the package is installed (or switched to another version), each missing one is imported in turn through Unity's Import dialog,
+using the portal's latest version. Cancelling a dialog skips that package; the rest still follow.
+
+- **Already imported, same version or newer**: nothing is imported.
+- **Already imported, older**: you are asked whether to remove the old version and import the new one.
+- **Some still missing or too old** (a cancelled dialog, the server was down, installed before this feature): the UPM package's
+  details show a warning and **Import dependencies** to go through them again. Its **Dependencies** tab lists each one's state.
+- **Removing the UPM package**: for each dependency no other installed package needs, and that you didn't import yourself,
+  you are asked whether to remove it. One you keep is then treated as your own import.

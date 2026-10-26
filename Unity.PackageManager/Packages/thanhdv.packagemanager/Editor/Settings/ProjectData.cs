@@ -51,14 +51,18 @@ namespace ThanhDV.PackageManager
         /// Records a (re-)import: the version is overwritten, GUIDs are merged with the earlier ones so
         /// Remove still finds files that only an older version had.
         /// </summary>
-        public void RecordImport(string packageId, string displayName, string version, IEnumerable<string> guids, DateTime now)
+        /// <param name="requiredBy">The UPM package whose "udependencies" pulled this in; null when the user imported it.</param>
+        public void RecordImport(string packageId, string displayName, string version, IEnumerable<string> guids, DateTime now,
+            string requiredBy = null)
         {
             var record = Find(packageId);
             if (record == null)
             {
-                record = new ImportedPackage { PackageId = packageId };
+                record = new ImportedPackage { PackageId = packageId, Explicit = requiredBy == null };
                 Imported.Add(record);
             }
+            else if (requiredBy == null) record.Explicit = true;
+            if (requiredBy != null) AddRequiredBy(record, requiredBy);
             record.DisplayName = displayName;
             record.Version = version;
             record.ImportedAt = now;
@@ -68,6 +72,25 @@ namespace ThanhDV.PackageManager
                 if (known.Add(guid)) record.Guids.Add(guid);
             // Sorted so re-imports give small, stable diffs in git.
             record.Guids.Sort(StringComparer.Ordinal);
+        }
+
+        public void AddRequiredBy(ImportedPackage record, string upmName)
+        {
+            if (record.RequiredBy.Contains(upmName)) return;
+            record.RequiredBy.Add(upmName);
+            record.RequiredBy.Sort(StringComparer.Ordinal);
+        }
+
+        /// <summary>Takes <paramref name="upmName"/> off every package except those it still needs.</summary>
+        /// <returns>Packages that nothing needs any more and that the user didn't import themselves.</returns>
+        public List<ImportedPackage> DropRequiredBy(string upmName, ICollection<string> stillNeeded)
+        {
+            var orphans = new List<ImportedPackage>();
+            foreach (var record in Imported)
+                if (!stillNeeded.Contains(record.PackageId) && record.RequiredBy.Remove(upmName) &&
+                    record.RequiredBy.Count == 0 && !record.Explicit)
+                    orphans.Add(record);
+            return orphans;
         }
 
         private static ProjectData Load()
@@ -92,5 +115,9 @@ namespace ThanhDV.PackageManager
         public string Version { get; set; } = "";
         public DateTime ImportedAt { get; set; }
         public List<string> Guids { get; set; } = new List<string>();
+        /// <summary>Imported by the user, not only pulled in by "udependencies". Records from before udependencies default to true.</summary>
+        public bool Explicit { get; set; } = true;
+        /// <summary>Installed UPM packages whose "udependencies" need this package.</summary>
+        public List<string> RequiredBy { get; set; } = new List<string>();
     }
 }

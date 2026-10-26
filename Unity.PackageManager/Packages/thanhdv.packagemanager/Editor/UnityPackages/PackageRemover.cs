@@ -45,14 +45,8 @@ namespace ThanhDV.PackageManager
         /// <returns>Paths that could not be removed.</returns>
         public static List<string> Remove(ProjectData data, string packageId, IReadOnlyCollection<string> paths)
         {
-            var failed = new List<string>();
-            var files = paths.Where(p => !AssetDatabase.IsValidFolder(p)).ToArray();
-            if (files.Length > 0) AssetDatabase.MoveAssetsToTrash(files, failed);
-
-            // Longest first: a folder's contents always have longer paths than the folder itself.
-            foreach (string folder in paths.Where(AssetDatabase.IsValidFolder).OrderByDescending(p => p.Length))
-                if (!Directory.EnumerateFileSystemEntries(folder).Any() && !AssetDatabase.MoveAssetToTrash(folder))
-                    failed.Add(folder);
+            int fileCount = paths.Count(p => !AssetDatabase.IsValidFolder(p));
+            var failed = MoveToTrash(paths);
 
             var record = data.Find(packageId);
             if (record != null)
@@ -62,10 +56,25 @@ namespace ThanhDV.PackageManager
             }
 
             string name = record?.DisplayName ?? packageId;
-            int moved = files.Length - failed.Count(f => !AssetDatabase.IsValidFolder(f));
+            int moved = fileCount - failed.Count(f => !AssetDatabase.IsValidFolder(f));
             Removed?.Invoke(failed.Count == 0
                 ? $"Removed {name}: {moved} file(s) moved to the trash."
                 : $"Removed {name}, but {failed.Count} item(s) could not be moved to the trash (see the Console).", failed.Count > 0);
+            return failed;
+        }
+
+        /// <summary>Moves the files to the OS trash, then each folder among <paramref name="paths"/> that ended up empty.</summary>
+        /// <returns>Paths that could not be removed.</returns>
+        public static List<string> MoveToTrash(IReadOnlyCollection<string> paths)
+        {
+            var failed = new List<string>();
+            var files = paths.Where(p => !AssetDatabase.IsValidFolder(p)).ToArray();
+            if (files.Length > 0) AssetDatabase.MoveAssetsToTrash(files, failed);
+
+            // Longest first: a folder's contents always have longer paths than the folder itself.
+            foreach (string folder in paths.Where(AssetDatabase.IsValidFolder).OrderByDescending(p => p.Length))
+                if (!Directory.EnumerateFileSystemEntries(folder).Any() && !AssetDatabase.MoveAssetToTrash(folder))
+                    failed.Add(folder);
             return failed;
         }
 
