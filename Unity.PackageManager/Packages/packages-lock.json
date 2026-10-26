@@ -17,8 +17,8 @@
       },
       "hash": "7af43454d3bbe97045e720e731b13723a20a41c6"
     },
-    "com.thanhdv.packagemanager": {
-      "version": "file:com.thanhdv.packagemanager",
+    "thanhdv.packagemanager": {
+      "version": "file:thanhdv.packagemanager",
       "depth": 0,
       "source": "embedded",
       "dependencies": {

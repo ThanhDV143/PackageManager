@@ -10,7 +10,7 @@ namespace ThanhDV.PackageManager
     /// </summary>
     internal static class Theme
     {
-        private const string UiPath = "Packages/com.thanhdv.packagemanager/Editor/UI/";
+        private const string UiPath = "Packages/thanhdv.packagemanager/Editor/UI/";
 
         public static bool IsDark => EditorGUIUtility.isProSkin;
 

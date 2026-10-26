@@ -4,7 +4,7 @@ namespace PackageManager.Tests;
 public class SharedCopyTests
 {
     private const string SharedDir = "Web/src/PackageManager.Shared";
-    private const string UnityCopyDir = "Unity.PackageManager/Packages/com.thanhdv.packagemanager/Editor/Shared";
+    private const string UnityCopyDir = "Unity.PackageManager/Packages/thanhdv.packagemanager/Editor/Shared";
 
     [Theory]
     [InlineData("Dtos.cs")]

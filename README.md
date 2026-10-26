@@ -8,7 +8,7 @@ packages on Verdaccio, plus a Unity editor tool to install them straight into a 
 | Folder | What it is |
 | --- | --- |
 | [`Web/`](Web/README.md) | Portal: ASP.NET Core API + Blazor WebAssembly UI, SQLite, one Docker image |
-| [`Unity.PackageManager/`](Unity.PackageManager/Packages/com.thanhdv.packagemanager/README.md) | Unity project hosting the editor tool `com.thanhdv.packagemanager` |
+| [`Unity.PackageManager/`](Unity.PackageManager/Packages/thanhdv.packagemanager/README.md) | Unity project hosting the editor tool `thanhdv.packagemanager` |
 
 ## Features
 

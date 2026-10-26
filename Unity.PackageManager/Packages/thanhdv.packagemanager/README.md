@@ -12,10 +12,10 @@ Requires Unity 2022.3 or newer.
 In Unity: **Window > Package Manager > + > Add package from git URL...**, then paste:
 
 ```
-https://github.com/ThanhDV143/PackageManager.git?path=/Unity.PackageManager/Packages/com.thanhdv.packagemanager
+https://github.com/ThanhDV143/PackageManager.git?path=/Unity.PackageManager/Packages/thanhdv.packagemanager
 ```
 
-Add `#v1.0.0` at the end to pin a release tag instead of the latest `main`.
+Add `#v1.0.1` at the end to pin a release tag instead of the latest `main`.
 
 ### From the ThanhDV registry
 
@@ -27,11 +27,11 @@ Add the registry and the package to `Packages/manifest.json`:
     {
       "name": "ThanhDV",
       "url": "https://upm.thanhdv.com",
-      "scopes": [ "com.thanhdv" ]
+      "scopes": [ "thanhdv" ]
     }
   ],
   "dependencies": {
-    "com.thanhdv.packagemanager": "1.0.0"
+    "thanhdv.packagemanager": "1.0.1"
   }
 }
 ```

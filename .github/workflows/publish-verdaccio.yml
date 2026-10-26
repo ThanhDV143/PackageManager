@@ -16,7 +16,7 @@ jobs:
     # ====================================================================
     defaults:
       run:
-        working-directory: Unity.PackageManager/Packages/com.thanhdv.packagemanager
+        working-directory: Unity.PackageManager/Packages/thanhdv.packagemanager
 
     # ====================================================================
     # 🌐 SHARED CONFIG — same across all your projects, rarely changes
