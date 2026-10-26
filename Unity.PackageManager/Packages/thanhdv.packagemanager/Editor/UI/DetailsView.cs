@@ -324,8 +324,8 @@ namespace ThanhDV.PackageManager
             _setStatus($"Installing {detail.Name} {version}…", false, null);
             try
             {
-                await UpmService.Install(detail, version);
-                _setStatus($"Installed {detail.Name} {version}.", false, null);
+                var notes = await UpmService.Install(detail, version);
+                _setStatus(string.Join(" ", new[] { $"Installed {detail.Name} {version}." }.Concat(notes)), false, null);
             }
             catch (Exception e)
             {

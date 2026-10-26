@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 
@@ -65,6 +66,68 @@ namespace ThanhDV.PackageManager
             scopes.Add(scope);
             return true;
         }
+
+        /// <summary>
+        /// Makes <paramref name="packageName"/>, a dependency of a package from <paramref name="url"/>, resolve from
+        /// there too. Unity takes the registry with the longest scope covering a name, so a dependency another
+        /// registry already wins stays with it (<paramref name="servedBy"/> names that registry), while narrower
+        /// scopes of other registries ("com.tayx.other" under an added "com.tayx") keep winning their packages.
+        /// </summary>
+        /// <returns>True when the manifest changed.</returns>
+        public static bool EnsureDependency(JObject manifest, string registryName, string url, string packageName, out string servedBy)
+        {
+            servedBy = null;
+            string scope = ScopeFor(packageName);
+            if (scope == null) return false;
+
+            if (!(manifest["scopedRegistries"] is JArray registries))
+            {
+                registries = new JArray();
+                manifest["scopedRegistries"] = registries;
+            }
+            var winner = registries.OfType<JObject>()
+                .SelectMany(r => Scopes(r).Select(s => (Registry: r, Scope: s)))
+                .Where(x => Covers(x.Scope, packageName))
+                .OrderByDescending(x => x.Scope.Length)
+                .Select(x => x.Registry)
+                .FirstOrDefault();
+            if (winner != null)
+            {
+                if (!SameUrl((string)winner["url"], url)) servedBy = (string)winner["name"];
+                return false;
+            }
+
+            var entry = registries.OfType<JObject>().FirstOrDefault(r => SameUrl((string)r["url"], url));
+            if (entry == null)
+            {
+                registries.Add(new JObject
+                {
+                    ["name"] = registryName,
+                    ["url"] = url,
+                    ["scopes"] = new JArray(scope),
+                });
+                return true;
+            }
+            if (!(entry["scopes"] is JArray scopes))
+            {
+                scopes = new JArray();
+                entry["scopes"] = scopes;
+            }
+            scopes.Add(scope);
+            return true;
+        }
+
+        /// <summary>Scopes of the registry at <paramref name="url"/> that another registry lists too.</summary>
+        public static List<string> SharedScopes(JObject manifest, string url)
+        {
+            var registries = (manifest["scopedRegistries"] as JArray ?? new JArray()).OfType<JObject>().ToList();
+            var mine = registries.Where(r => SameUrl((string)r["url"], url)).SelectMany(Scopes).ToList();
+            var others = new HashSet<string>(registries.Where(r => !SameUrl((string)r["url"], url)).SelectMany(Scopes));
+            return mine.Where(others.Contains).Distinct().ToList();
+        }
+
+        private static IEnumerable<string> Scopes(JObject registry) =>
+            (registry["scopes"] as JArray ?? new JArray()).Select(s => (string)s).Where(s => s != null);
 
         private static bool SameUrl(string a, string b) =>
             a != null && string.Equals(a.Trim().TrimEnd('/'), b.Trim().TrimEnd('/'), StringComparison.OrdinalIgnoreCase);

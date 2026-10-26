@@ -191,9 +191,11 @@ namespace ThanhDV.PackageManager
 
             _loading = false;
             string error = _packagesError ?? _upmError ?? installedError;
+            string warning = _upm != null && _upm.Available ? UpmService.SharedScopesWarning(_upm.Registry) : null;
             // Not configured yet is a normal first state (the list explains it), not something to log.
             if (!ServerClient.IsConfigured) SetStatus("", false);
             else if (error == null && _outcome != null) SetStatus(_outcome, _outcomeIsError);
+            else if (error == null && warning != null) SetStatus(warning, true);
             else SetStatus(error ?? $"Loaded {_packages.Count} Unity package(s) and {_upm?.Packages.Count ?? 0} UPM package(s).", error != null);
             _outcome = null;
             RebuildItems();

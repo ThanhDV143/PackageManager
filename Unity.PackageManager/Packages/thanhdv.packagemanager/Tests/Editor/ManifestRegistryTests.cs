@@ -72,5 +72,80 @@ namespace ThanhDV.PackageManager.Tests
         [Test]
         public void Ensure_RefusesUnityScope() =>
             Assert.Throws<InvalidOperationException>(() => ManifestRegistry.Ensure(new JObject(), "ThanhDV", Url, "com.unity.forked"));
+
+        [Test]
+        public void EnsureDependency_AddsItsScopeToTheRegistry()
+        {
+            var manifest = JObject.Parse("{\"scopedRegistries\":[{\"name\":\"ThanhDV\",\"url\":\"https://upm.thanhdv.com/\",\"scopes\":[\"thanhdv\"]}]}");
+            Assert.IsTrue(ManifestRegistry.EnsureDependency(manifest, "ThanhDV", Url, "com.tayx.graphy", out string servedBy));
+            Assert.IsNull(servedBy);
+            CollectionAssert.AreEqual(new[] { "thanhdv", "com.tayx" }, manifest["scopedRegistries"][0]["scopes"].ToObject<string[]>());
+        }
+
+        [Test]
+        public void EnsureDependency_AddsRegistryWhenMissing()
+        {
+            var manifest = new JObject();
+            Assert.IsTrue(ManifestRegistry.EnsureDependency(manifest, "ThanhDV", Url, "com.tayx.graphy", out _));
+            CollectionAssert.AreEqual(new[] { "com.tayx" }, manifest["scopedRegistries"][0]["scopes"].ToObject<string[]>());
+        }
+
+        [Test]
+        public void EnsureDependency_NoChangeWhenAlreadyCovered()
+        {
+            var manifest = JObject.Parse("{\"scopedRegistries\":[{\"name\":\"ThanhDV\",\"url\":\"https://upm.thanhdv.com\",\"scopes\":[\"com.tayx\"]}]}");
+            string before = manifest.ToString();
+            Assert.IsFalse(ManifestRegistry.EnsureDependency(manifest, "ThanhDV", Url, "com.tayx.graphy", out string servedBy));
+            Assert.IsNull(servedBy);
+            Assert.AreEqual(before, manifest.ToString());
+        }
+
+        [TestCase("com.tayx")]
+        [TestCase("com.tayx.graphy")]
+        public void EnsureDependency_LeavesItWithTheRegistryServingIt(string openUpmScope)
+        {
+            var manifest = JObject.Parse("{\"scopedRegistries\":[{\"name\":\"OpenUPM\",\"url\":\"https://package.openupm.com\",\"scopes\":[\"" + openUpmScope + "\"]}]}");
+            string before = manifest.ToString();
+            Assert.IsFalse(ManifestRegistry.EnsureDependency(manifest, "ThanhDV", Url, "com.tayx.graphy", out string servedBy));
+            Assert.AreEqual("OpenUPM", servedBy);
+            Assert.AreEqual(before, manifest.ToString());
+        }
+
+        [Test]
+        public void EnsureDependency_LongestScopeWins()
+        {
+            var manifest = JObject.Parse("{\"scopedRegistries\":[" +
+                "{\"name\":\"ThanhDV\",\"url\":\"https://upm.thanhdv.com\",\"scopes\":[\"com.tayx\"]}," +
+                "{\"name\":\"OpenUPM\",\"url\":\"https://package.openupm.com\",\"scopes\":[\"com.tayx.graphy\"]}]}");
+            Assert.IsFalse(ManifestRegistry.EnsureDependency(manifest, "ThanhDV", Url, "com.tayx.graphy", out string servedBy));
+            Assert.AreEqual("OpenUPM", servedBy);
+        }
+
+        [Test]
+        public void EnsureDependency_IgnoresNarrowerScopesOfOtherRegistries()
+        {
+            var manifest = JObject.Parse("{\"scopedRegistries\":[{\"name\":\"OpenUPM\",\"url\":\"https://package.openupm.com\",\"scopes\":[\"com.tayx.other\"]}]}");
+            Assert.IsTrue(ManifestRegistry.EnsureDependency(manifest, "ThanhDV", Url, "com.tayx.graphy", out string servedBy));
+            Assert.IsNull(servedBy);
+            CollectionAssert.AreEqual(new[] { "com.tayx" }, manifest["scopedRegistries"][1]["scopes"].ToObject<string[]>());
+        }
+
+        [Test]
+        public void EnsureDependency_SkipsUnityPackages()
+        {
+            var manifest = new JObject();
+            Assert.IsFalse(ManifestRegistry.EnsureDependency(manifest, "ThanhDV", Url, "com.unity.textmeshpro", out string servedBy));
+            Assert.IsNull(servedBy);
+            Assert.AreEqual("{}", manifest.ToString(Newtonsoft.Json.Formatting.None));
+        }
+
+        [Test]
+        public void SharedScopes_ListsScopesAnotherRegistryHasToo()
+        {
+            var manifest = JObject.Parse("{\"scopedRegistries\":[" +
+                "{\"name\":\"ThanhDV\",\"url\":\"https://upm.thanhdv.com/\",\"scopes\":[\"thanhdv\",\"com.tayx\"]}," +
+                "{\"name\":\"OpenUPM\",\"url\":\"https://package.openupm.com\",\"scopes\":[\"com.tayx\",\"com.tayx.graphy\"]}]}");
+            CollectionAssert.AreEqual(new[] { "com.tayx" }, ManifestRegistry.SharedScopes(manifest, Url));
+        }
     }
 }
