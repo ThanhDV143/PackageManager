@@ -42,6 +42,17 @@ namespace ThanhDV.PackageManager.Tests
         }
 
         [Test]
+        public void Ensure_AddsScopeToTheSameHost_IgnoringScheme()
+        {
+            var manifest = JObject.Parse("{\"scopedRegistries\":[{\"name\":\"ThanhDV\",\"url\":\"http://upm.thanhdv.com\",\"scopes\":[\"thanhdv\"]}]}");
+            Assert.IsTrue(ManifestRegistry.Ensure(manifest, "ThanhDV", Url, "com.thanhdv.utils"));
+            var registries = (JArray)manifest["scopedRegistries"];
+            Assert.AreEqual(1, registries.Count);
+            Assert.AreEqual("http://upm.thanhdv.com", (string)registries[0]["url"]);
+            CollectionAssert.AreEqual(new[] { "thanhdv", "com.thanhdv" }, registries[0]["scopes"].ToObject<string[]>());
+        }
+
+        [Test]
         public void Ensure_LeavesOtherRegistriesAlone()
         {
             var manifest = JObject.Parse("{\"scopedRegistries\":[{\"name\":\"OpenUPM\",\"url\":\"https://package.openupm.com\",\"scopes\":[\"com.cysharp\"]}]}");
@@ -67,6 +78,22 @@ namespace ThanhDV.PackageManager.Tests
             string before = manifest.ToString();
             Assert.Throws<InvalidOperationException>(() => ManifestRegistry.Ensure(manifest, "ThanhDV", Url, "com.cysharp.unitask"));
             Assert.AreEqual(before, manifest.ToString());
+        }
+
+        [Test]
+        public void Ensure_RefusesSameNameAtAnotherUrl()
+        {
+            var manifest = JObject.Parse("{\"scopedRegistries\":[{\"name\":\"ThanhDV\",\"url\":\"http://192.168.1.10:4873\",\"scopes\":[\"thanhdv\"]}]}");
+            string before = manifest.ToString();
+            Assert.Throws<InvalidOperationException>(() => ManifestRegistry.Ensure(manifest, "ThanhDV", Url, "com.thanhdv.utils"));
+            Assert.AreEqual(before, manifest.ToString());
+        }
+
+        [Test]
+        public void EnsureDependency_RefusesSameNameAtAnotherUrl()
+        {
+            var manifest = JObject.Parse("{\"scopedRegistries\":[{\"name\":\"ThanhDV\",\"url\":\"http://192.168.1.10:4873\",\"scopes\":[\"thanhdv\"]}]}");
+            Assert.Throws<InvalidOperationException>(() => ManifestRegistry.EnsureDependency(manifest, "ThanhDV", Url, "com.tayx.graphy", out _));
         }
 
         [Test]

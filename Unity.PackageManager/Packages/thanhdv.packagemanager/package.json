@@ -1,6 +1,6 @@
 {
     "name": "thanhdv.packagemanager",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "displayName": "Package Manager",
     "description": "Browse, import and remove packages from the ThanhDV package server.",
     "unity": "2022.3",

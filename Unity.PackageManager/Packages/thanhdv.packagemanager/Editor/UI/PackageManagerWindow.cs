@@ -291,7 +291,7 @@ namespace ThanhDV.PackageManager
             {
                 var names = new HashSet<string>(_upm.Packages.Select(p => p.Name));
                 items.AddRange(_installed.Values
-                    .Where(p => !names.Contains(p.name) && p.registry != null && SameUrl(p.registry.url, _upm.Registry))
+                    .Where(p => !names.Contains(p.name) && p.registry != null && ManifestRegistry.SameUrl(p.registry.url, _upm.Registry))
                     .Select(p => new PackageItem
                     {
                         IsUpm = true,
@@ -304,9 +304,6 @@ namespace ThanhDV.PackageManager
             }
             return items;
         }
-
-        private static bool SameUrl(string a, string b) =>
-            a != null && b != null && string.Equals(a.Trim().TrimEnd('/'), b.Trim().TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
 
         private void RebuildItems()
         {

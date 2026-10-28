@@ -48,12 +48,7 @@ namespace ThanhDV.PackageManager
 
             if (entry == null)
             {
-                registries.Add(new JObject
-                {
-                    ["name"] = registryName,
-                    ["url"] = url,
-                    ["scopes"] = new JArray(scope),
-                });
+                AddRegistry(registries, registryName, url, scope, packageName);
                 return true;
             }
 
@@ -100,12 +95,7 @@ namespace ThanhDV.PackageManager
             var entry = registries.OfType<JObject>().FirstOrDefault(r => SameUrl((string)r["url"], url));
             if (entry == null)
             {
-                registries.Add(new JObject
-                {
-                    ["name"] = registryName,
-                    ["url"] = url,
-                    ["scopes"] = new JArray(scope),
-                });
+                AddRegistry(registries, registryName, url, scope, packageName);
                 return true;
             }
             if (!(entry["scopes"] is JArray scopes))
@@ -126,10 +116,32 @@ namespace ThanhDV.PackageManager
             return mine.Where(others.Contains).Distinct().ToList();
         }
 
+        /// <summary>Unity rejects two registries with the same name, so one already at another URL is the user's to fix.</summary>
+        private static void AddRegistry(JArray registries, string registryName, string url, string scope, string packageName)
+        {
+            var sameName = registries.OfType<JObject>().FirstOrDefault(r => (string)r["name"] == registryName);
+            if (sameName != null)
+                throw new InvalidOperationException(
+                    $"Registry \"{registryName}\" in manifest.json points to {(string)sameName["url"]}, not {url}. Edit manifest.json before installing {packageName}.");
+            registries.Add(new JObject
+            {
+                ["name"] = registryName,
+                ["url"] = url,
+                ["scopes"] = new JArray(scope),
+            });
+        }
+
         private static IEnumerable<string> Scopes(JObject registry) =>
             (registry["scopes"] as JArray ?? new JArray()).Select(s => (string)s).Where(s => s != null);
 
-        private static bool SameUrl(string a, string b) =>
-            a != null && string.Equals(a.Trim().TrimEnd('/'), b.Trim().TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
+        public static bool SameUrl(string a, string b) =>
+            a != null && b != null && string.Equals(WithoutScheme(a), WithoutScheme(b), StringComparison.OrdinalIgnoreCase);
+
+        private static string WithoutScheme(string url)
+        {
+            url = url.Trim().TrimEnd('/');
+            int i = url.IndexOf("://", StringComparison.Ordinal);
+            return i < 0 ? url : url.Substring(i + 3);
+        }
     }
 }
